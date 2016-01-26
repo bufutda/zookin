@@ -21,6 +21,7 @@ prgm.on("--help", function() {
 ctt.init(prgm, 'zookin');
 prgm.parse(process.argv);
 if (!prgm.hasOwnProperty("runningCommand"))
+    if (prgm.args[0] != "completion")
     prgm.help();
 
 if (typeof process.argv[2] === "undefined") {
