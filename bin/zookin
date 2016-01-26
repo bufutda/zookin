@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+
+var prgm = require("commander");
+var ctt = require("commander-tabtab");
+
+
+prgm.version("zookin v0.0.1 (jan'16)")
+    .usage("[-hV] <command> [-options] [--help]")
+
+prgm.command("vigenere", "apply the vigenere cipher");
+prgm.command("score <text>", "view the score of a string of text");
+prgm.command("wordtree <dict>", "generate a new wordtree based on the dictionary");
+prgm.on("--help", function() {
+    for (var i = 0; i < prgm.args.length; i++) {
+        if (!/\-/.test(prgm.args[i])) {
+            console.error("  \033[31mUnknown command: " + prgm.args[i] + "\033[0m");
+            break;
+        }
+    }
+});
+ctt.init(prgm, 'zookin');
+prgm.parse(process.argv);
+if (!prgm.hasOwnProperty("runningCommand"))
+    prgm.help();
+
+if (typeof process.argv[2] === "undefined") {
+    prgm.help();
+}

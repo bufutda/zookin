@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+
+var val = require("../lib/validateString");
+var prgm = require("commander");
+prgm.arguments("<depth> <text>")
+    .action(function(depth, text) {
+        val(text, parseInt(depth), function(words, rank) {
+            console.log("At depth \033[33m" + depth + "\033[0m, '\033[33m" + text + "\033[0m' has a score of \033[31m" + rank + "\033[0m (" + words.join("\033[31m|\033[0m") + ")");
+        });
+    })
+    .parse(process.argv);

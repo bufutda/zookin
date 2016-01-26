@@ -1,0 +1,91 @@
+#!/usr/bin/env node
+
+var ProgressBar = require('progress');
+var fs = require("fs");
+var Event = require("events").EventEmitter;
+var vigenere = require("../lib/cipher/KeyedVigenere");
+var validate = require("../lib/validateString");
+
+var prgm = require("commander");
+prgm.option("-p, --password-file <path>", "Specify a password dictionary for bruteforcing")
+    .option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
+    .option("-e, --encrypt", "Set mode to encrypt")
+    .option("-d, --decrypt", "Set mode to decrypt")
+    .option("-k, --key <password>", "Key to use for encryption/decryption")
+    .option("-b, --bruteforce", "Attempt to bruteforce the cipher")
+    .option("--depth <int>", "Specify the depth of word requirement", parseInt)
+    .parse(process.argv);
+
+if (!prgm.hasOwnProperty("cipherText")) {
+    console.error("Error: Required switch: -c");
+    prgm.help();
+} else {
+    prgm.cipherText = prgm.cipherText.replace(/ /gmi, "");
+}
+if (prgm.bruteforce) {
+    if (prgm.key || prgm.decrypt || prgm.encrypt) {
+        console.error("Error: Incompatible switches");
+        prgm.help();
+    }
+    console.log("Attempting to bruteforce Vigenere Ciphertext: " + prgm.cipherText);
+    var go = new Event();
+    var top = [];
+    for (var i = 0; i < 25; i++)
+        top.push(["", 0, ""]);
+    var words = fs.readFileSync(prgm.passwordFile ? "../" + prgm.passwordFile : "../lib/dict/words2.txt").toString().split("\n");
+    words.splice(0,0,"");
+    function insert(string, score, key) {
+        for (var i = 0; i < top.length; i++) {
+            if (score > top[i][1]) {
+                top[i] = [string, score, key];
+                break;
+            }
+        }
+    }
+    function shutdown() {
+        process.stdout.write("\033[?25h");
+        process.stdout.write("\033[0m\n");
+        process.exit();
+    }
+
+    process.stdout.write("\033[?25l");
+    var bar = new ProgressBar('\033[35mVigenere\033[0m    [\033[34m:current\033[0m / \033[34m:total\033[0m][\033[34m:percent\033[0m][\033[34m:elapsed\033[0ms - \033[34m:eta\033[0ms] \033[33m╢\033[0m:bar\033[33m╟\033[0m :word', {
+        total: words.length,
+        stream: process.stdout,
+        width: process.stdout.columns,
+        complete: "\033[32m█\033[0m",
+        incomplete: "\033[31m░\033[0m",
+        renderThrottle: 5000,
+        callback: function() {
+            console.log("");
+            console.log("(p%)\trank. passphrase used: resultant text\033[32m");
+            for (var i = 0; i < top.length; i++)
+                if (top[i][1])
+                    console.log("(" + Math.floor(100 * top[i][1] / top[0][1]) + ")\t" + (i+1) + ". " + top[i][2] +  ": " + top[i][0] + "\033[0m");
+            shutdown();
+        }
+    });
+
+    var counterIndex = 0;
+    go.on("next", function() {
+        bar.tick({word: words[counterIndex].toLowerCase()});
+        var res = vigenere(-1, prgm.cipherText, words[counterIndex], "", "");
+        var sc = validate(res, prgm.depth ? prgm.depth : 1);
+        if (sc > top[top.length-1][1])
+            insert(res,sc,words[counterIndex]);
+        counterIndex++;
+        if (counterIndex < words.length)
+            process.nextTick(function() {
+                go.emit("next");
+            });
+    });
+    go.emit("next");
+
+    process.on("exit", shutdown);
+    process.on("SIGINT", shutdown);
+    process.on("SIGHUP", shutdown);
+} else if (prgm.encrypt) {
+    console.log(vigenere(1, prgm.cipherText, prgm.key ? prgm.key : "", "", ""));
+} else if (prgm.decrypt) {
+    console.log(vigenere(-1, prgm.cipherText, prgm.key ? prgm.key : "", "", ""));
+}
