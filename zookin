@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+
+var prgm = require("commander");
+
+prgm.version("zookin v0.0.1 (jan'16)")
+    .usage("[-hV] <command> [-options] [--help]")
+
+prgm.command("vigenere", "apply the vigenere cipher");
+prgm.command("score <text>", "view the score of a string of text");
+
+prgm.parse(process.argv);
+
+if (typeof process.argv[2] === "undefined") {
+    prgm.help();
+}

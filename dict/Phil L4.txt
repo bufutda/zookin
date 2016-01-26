@@ -1,0 +1,67 @@
+    A only if B
+A conditional is true in an interpretation I iff either its anticedant (the sentence that precedes the arrow) is False in I or it's consequent (after the arrow) is True in I
+    A   B   A->B
+    1   1   1
+    1   0   0
+    0   1   1
+    0   0   1
+
+    If A then B (equivalent to A->B)
+
+    A   B   A only if B
+    1   1   1
+    1   0   0
+    0   1   1
+    0   0   1
+
+    If not B then not A (equivalent to A->B)
+
+TLDR
+A->B
+=Anticedant -> Consequent
+=If A then B
+=A only if B
+=B if A
+=If A, B
+=If not B then not A
+=A only if B
+
+    A if and only if B
+A iff B
+A <-> B
+=biconditional
+=A -> B ^ B -> A
+=A XNOR B
+    A   B   A<->B
+    1   1   1
+    1   0   0
+    0   1   0
+    0   0   1
+
+True maps to 1 or +, False maps to 0 or -
+AND (^) behaves like multiplication of 0 and 1
+OR (v) behaves like addition of 0 and 1
+XOR (<->) behaves like multiplication of + and -
+NOT (-) behaves like multiplication by -
+
+                -     -
+                | 1 1 | Valid
+Satisfiable     |     -
+                | 1 0 |
+                |     | Invalid
+                | 0 1 |
+                -     |
+Unsatisfiable   | 0 0 |
+                -     -
+
+A sentence A implies B iff the conditional A->B is VALID
+    every sentence implies itself
+    no sentence LETTER implies another sentence LETTER (1->0 is False)
+    In every interpretation of A that is true, B is also true.
+    Every sentence implies every valid sentence
+    Suppose that B is a valid sentence, and A is an sentence
+        B is true in all interpretations. (valid)
+        There is no interpretation in which A is true and B is false
+            So A implies B
+            So any sentence implies a valid sentence
+    An unsatisfiable sentence implies every sentence
