@@ -1,9 +1,6 @@
 #!/usr/bin/env node
-
 var prgm = require("commander");
 var ctt = require("commander-tabtab");
-
-
 prgm.version("zookin v0.0.1 (jan'16)")
     .usage("[-hV] <command> [-options] [--help]")
 

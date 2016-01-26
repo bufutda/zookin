@@ -15386,7 +15386,6 @@ dozes
 dozier
 dozing
 dozy
-dr
 drab
 drabness
 drachm
@@ -24929,7 +24928,6 @@ icosahedra
 icosahedral
 icosahedron
 icy
-id
 idaho
 idea
 ideal
@@ -32804,9 +32802,6 @@ mowing
 mown
 mows
 mozart
-mr
-mrs
-ms
 much
 muchness
 muck
@@ -57726,7 +57721,6 @@ yawning
 yawningly
 yawns
 yaws
-ye
 yeah
 yeaned
 year

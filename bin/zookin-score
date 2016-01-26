@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var val = require("../lib/validateString");
+var val = require(__dirname + "/../lib/validateString");
 var prgm = require("commander");
 prgm.arguments("<depth> <text>")
     .action(function(depth, text) {
