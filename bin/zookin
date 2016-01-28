@@ -4,7 +4,9 @@ var ctt = require("commander-tabtab");
 prgm.version("zookin v0.0.1 (jan'16)")
     .usage("[-hV] <command> [-options] [--help]")
 
-prgm.command("vigenere", "apply the vigenere cipher");
+prgm.command("vigenere", "\033[33mcipher\033[0m: vigenere");
+prgm.command("rotate", "\033[33mcipher\033[0m: rotate");
+prgm.command("skip", "\033[33mcipher\033[0m: skip");
 prgm.command("score <text>", "view the score of a string of text");
 prgm.command("wordtree <dict>", "generate a new wordtree based on the dictionary");
 prgm.on("--help", function() {
