@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 var prgm = require("commander");
 var ctt = require("commander-tabtab");
-prgm.version("zookin v0.0.1 (jan'16)")
+prgm.version("zookin v0.0.2 (aug'16)")
     .usage("[-hV] <command> [-options] [--help]")
 
 prgm.command("vigenere", "\033[33mcipher\033[0m: vigenere");

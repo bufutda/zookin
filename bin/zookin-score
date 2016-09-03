@@ -2,10 +2,18 @@
 
 var val = require(__dirname + "/../lib/validateString");
 var prgm = require("commander");
-prgm.arguments("<depth> <text>")
-    .action(function(depth, text) {
-        val(text, parseInt(depth), function(words, rank) {
-            console.log("At depth \033[33m" + depth + "\033[0m, '\033[33m" + text + "\033[0m' has a score of \033[31m" + rank + "\033[0m (" + words.join("\033[31m|\033[0m") + ")");
+prgm.arguments("<text>")
+    .action(function(text) {
+        val(text, function(rank, split) {
+            console.log("'\033[33m" + text + "\033[0m' has a score of \033[31m" + (split.length - 1) + "-" + rank + "\033[0m (" + separateString(text, split) + ")");
         });
-    })
-    .parse(process.argv);
+    }
+).parse(process.argv);
+
+function separateString (string, splits) {
+    var str = [];
+    for (var i = 0; i < splits.length - 1; i++) {
+        str.push(string.substring(splits[i], splits[i + 1]));
+    }
+    return str.join("\x1b[31m|\x1b[0m");
+}
