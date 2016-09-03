@@ -1,11 +1,10 @@
 #!/usr/bin/env node
-
-var ProgressBar = require('progress');
+"use strict";
+var ProgressBar = require("progress");
+var utils = require(__dirname + "/../lib/utils");
 var fs = require("fs");
 var Event = require("events").EventEmitter;
-var Table = require("cli-table");
 var vigenere = require(__dirname + "/../lib/cipher/KeyedVigenere");
-var validate = require(__dirname + "/../lib/validateString");
 
 var prgm = require("commander");
 prgm.option("-p, --password-file <path>", "Specify a password dictionary for bruteforcing")
@@ -31,68 +30,53 @@ if (prgm.bruteforce) {
     var go = new Event();
     var top = [];
     var superTop = [];
-    for (var i = 0; i < 25; i++)
+    for (var i = 0; i < 25; i++) {
         top.push(["", 0, "", []]);
+    }
     var words = fs.readFileSync(prgm.passwordFile ? __dirname + "/" + prgm.passwordFile : __dirname + "/../lib/dict/words2.txt").toString().split("\n");
-    words.splice(0,0,"");
-    function insert(string, score, key, split) {
-        for (var i = 0; i < top.length; i++) {
-            if (split.length > top[i][3].length) {
-                if (score > top[i][1]) {
-                    top[i] = [string, score, key, split];
-                    break;
-                }
-            }
-        }
-    }
-    function shutdown() {
-        process.stdout.write("\033[?25h");
-        process.stdout.write("\033[0m\n");
-        process.exit();
-    }
+    words.splice(0, 0, "");
 
-    process.stdout.write("\033[?25l");
-    var bar = new ProgressBar('\033[35mVigenere\033[0m    [\033[34m:current\033[0m / \033[34m:total\033[0m][\033[34m:percent\033[0m][\033[34m:elapsed\033[0ms - \033[34m:eta\033[0ms] \033[33m╢\033[0m:bar\033[33m╟\033[0m :word', {
+    process.stdout.write("\x1b[?25l");
+    var bar = new ProgressBar("\x1b[35mVigenere\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
         total: words.length,
         stream: process.stdout,
         width: process.stdout.columns,
-        complete: "\033[32m█\033[0m",
-        incomplete: "\033[31m░\033[0m",
+        complete: "\x1b[32m█\x1b[0m",
+        incomplete: "\x1b[31m░\x1b[0m",
         renderThrottle: 5000,
-        callback: function() {
+        callback: function () {
             console.log("");
-            var tbl = new Table({
+            var tbl = new utils.Table({
                 head: ["P%", "Key", "Result", "SplitLogic"]
             });
             for (var i = 0; i < superTop.length; i++) {
-                tbl.push(["\x1b[32m" + Math.floor(100 * superTop[i][1] / top[0][1]), "\x1b[32m" + superTop[i][2], "\x1b[32m" + superTop[i][0], separateString(superTop[i][0], superTop[i][3])]);
+                tbl.push(["\x1b[32m" + Math.floor(100 * superTop[i][1] / top[0][1]), "\x1b[32m" + superTop[i][2], "\x1b[32m" + superTop[i][0], utils.separateString(superTop[i][0], superTop[i][3])]);
             }
-            for (var i = 0; i < top.length; i++)
+            for (var i = 0; i < top.length; i++) {
                 if (top[i][1]) {
-                    tbl.push([Math.floor(100 * top[i][1] / top[0][1]), top[i][2], top[i][0], separateString(top[i][0], top[i][3])]);
+                    tbl.push([Math.floor(100 * top[i][1] / top[0][1]), top[i][2], top[i][0], utils.separateString(top[i][0], top[i][3])]);
                 }
-            debugger;
+            }
             console.log(tbl.toString());
-            shutdown();
+            utils.shutdown();
         }
     });
 
     var counterIndex = 0;
-    go.on("next", function() {
+    go.on("next", function () {
         bar.tick({word: words[counterIndex].toLowerCase()});
         var res = vigenere(-1, prgm.cipherText, words[counterIndex], "", "");
-        validate(res, function (sc, split, full) {
-            debugger;
+        utils.validate(res, function (sc, split, full) {
             if (full) {
                 superTop.push([res, sc, words[counterIndex], split]);
-            } else if (split.length > top[top.length-1][3].length) {
-                if (sc > top[top.length-1][1]) {
-                    insert(res,sc,words[counterIndex],split);
+            } else if (split.length > top[top.length - 1][3].length) {
+                if (sc > top[top.length - 1][1]) {
+                    utils.insert(top, res, sc, words[counterIndex], split);
                 }
             }
             counterIndex++;
             if (counterIndex < words.length) {
-                process.nextTick(function() {
+                process.nextTick(function () {
                     go.emit("next");
                 });
             }
@@ -100,18 +84,9 @@ if (prgm.bruteforce) {
     });
     go.emit("next");
 
-    process.on("exit", shutdown);
-    process.on("SIGINT", shutdown);
-    process.on("SIGHUP", shutdown);
+    utils.listenForExit();
 } else if (prgm.encrypt) {
     console.log(vigenere(1, prgm.cipherText, prgm.key ? prgm.key : "", "", ""));
 } else if (prgm.decrypt) {
     console.log(vigenere(-1, prgm.cipherText, prgm.key ? prgm.key : "", "", ""));
-}
-function separateString (string, splits) {
-    var str = [];
-    for (var i = 0; i < splits.length - 1; i++) {
-        str.push(string.substring(splits[i], splits[i + 1]));
-    }
-    return str.join("\x1b[31m|\x1b[0m");
 }

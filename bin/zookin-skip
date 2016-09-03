@@ -38,25 +38,25 @@ if (prgm.bruteforce) {
         }
     }
     function shutdown() {
-        process.stdout.write("\033[?25h");
-        process.stdout.write("\033[0m\n");
+        process.stdout.write("\x1b[?25h");
+        process.stdout.write("\x1b[0m\n");
         process.exit();
     }
 
-    process.stdout.write("\033[?25l");
-    var bar = new ProgressBar('\033[35mSkip\033[0m    [\033[34m:current\033[0m / \033[34m:total\033[0m][\033[34m:percent\033[0m][\033[34m:elapsed\033[0ms - \033[34m:eta\033[0ms] \033[33m╢\033[0m:bar\033[33m╟\033[0m :word', {
+    process.stdout.write("\x1b[?25l");
+    var bar = new ProgressBar('\x1b[35mSkip\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word', {
         total: prgm.cipherText.length,
         stream: process.stdout,
         width: process.stdout.columns,
-        complete: "\033[32m█\033[0m",
-        incomplete: "\033[31m░\033[0m",
+        complete: "\x1b[32m█\x1b[0m",
+        incomplete: "\x1b[31m░\x1b[0m",
         renderThrottle: 5000,
         callback: function() {
             console.log("");
-            console.log("(p%)\trank. passphrase used: resultant text\033[32m");
+            console.log("(p%)\trank. passphrase used: resultant text\x1b[32m");
             for (var i = 0; i < top.length; i++)
                 if (top[i][1])
-                    console.log("(" + Math.floor(100 * top[i][1] / top[0][1]) + ")\t" + (i+1) + ". " + top[i][2] +  ": " + top[i][0] + "\033[0m");
+                    console.log("(" + Math.floor(100 * top[i][1] / top[0][1]) + ")\t" + (i+1) + ". " + top[i][2] +  ": " + top[i][0] + "\x1b[0m");
             shutdown();
         }
     });

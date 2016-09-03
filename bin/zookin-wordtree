@@ -1,37 +1,90 @@
 #!/usr/bin/env node
-
+"use strict";
 var fs = require("fs");
-var val = require(__dirname + "/../lib/validateString");
 var prgm = require("commander");
 
-prgm.arguments("<dict>")
-    .action(function(dict) {
-        var words = fs.readFileSync(dict).toString().split("\n");
-
-        var wT = {};
-
-        var recursiveTreeBuild = function(c, o, w) {
-            if (o.hasOwnProperty(w[c])) {
-                var fO = o[w[c]];
-            } else {
-                o[w[c]] = {};
-                var fO = o[w[c]];
-            }
-
-            if (c == w.length - 1) {
-                o[w[c]]._ = 1;
-                return;
-            } else {
-                return recursiveTreeBuild(c + 1, fO, w);
-            }
-        }
-
-        for (var i = 0; i < words.length; i++) {
-            var word = words[i].toUpperCase().split("");
-            if (word.length)
-                recursiveTreeBuild(0, wT, word);
-        }
-        fs.writeFileSync(__dirname + "/../lib/dict/wordTree.json", JSON.stringify(wT));
-        console.log("Created word tree: lib/dict/wordTree.json");
-    })
+prgm.option("-g, --generate-from-file <path>", "Generate a new WordTree from the dictionary at <path>; save it to lib/dict/wordtree.json")
+    .option("-a, --add <word>", "Add a word to the wordtree at lib/dict/wordtree.json")
+    .option("-x, --exists <word>", "Check if a word is in the wordtree at lib/dict/wordtree.json")
     .parse(process.argv);
+
+if (prgm.generateFromFile) {
+    var words = fs.readFileSync(prgm.generateFromFile).toString().split("\n");
+
+    var wT = {};
+
+    function recursiveTreeBuild (c, o, w) { // eslint-disable-line require-jsdoc
+        if (o.hasOwnProperty(w[c])) {
+            var fO = o[w[c]];
+        } else {
+            o[w[c]] = {};
+            var fO = o[w[c]];
+        }
+
+        if (c === w.length - 1) {
+            o[w[c]]._ = 1;
+            return;
+        }
+        return recursiveTreeBuild(c + 1, fO, w);
+    }
+
+    for (var i = 0; i < words.length; i++) {
+        var word = words[i].toUpperCase().split("");
+        if (word.length) {
+            recursiveTreeBuild(0, wT, word);
+        }
+    }
+    fs.writeFileSync(__dirname + "/../lib/dict/wordTree.json", JSON.stringify(wT));
+    console.log("Created word tree: lib/dict/wordTree.json");
+    process.exit(0);
+}
+if (prgm.add) {
+    prgm.add = prgm.add.toUpperCase();
+    if (/[^A-Z]/.test(prgm.add)) {
+        console.error("\x1b[31mFatal\x1b[0m:\tWord must be alpha-numeric: " + prgm.add);
+        process.exit(1);
+    }
+    var wordTree = require(__dirname + "/../lib/dict/wordTree.json");
+    var o = wordTree;
+    for (var i = 0; i < prgm.add.length; i++) {
+        if (o.hasOwnProperty(prgm.add[i])) {
+            o = o[prgm.add[i]];
+        } else {
+            o[prgm.add[i]] = {};
+            o = o[prgm.add[i]];
+        }
+    }
+    if (o.hasOwnProperty("_")) {
+        console.error("\x1b[31mFatal\x1b[0m:\tWord already exists");
+        process.exit(1);
+    } else {
+        o._ = 1;
+        fs.writeFileSync(__dirname + "/../lib/dict/wordTree.json", JSON.stringify(wordTree));
+        console.log("Word added to lib/dict/wordTree.json");
+        process.exit(0);
+    }
+}
+if (prgm.exists) {
+    var exists = prgm.exists.toUpperCase();
+    if (/[^A-Z]/.test(exists)) {
+        console.error("\x1b[31mFatal\x1b[0m:\tWord must be alpha-numeric: " + prgm.exists);
+        process.exit(1);
+    }
+    var wordTree = require(__dirname + "/../lib/dict/wordTree.json");
+    var o = wordTree;
+    for (var i = 0; i < exists.length; i++) {
+        if (o.hasOwnProperty(exists[i])) {
+            o = o[exists[i]];
+        } else {
+            console.log(exists + " does not exist. Add it with zookin wordtree -a " + exists);
+            process.exit(1);
+        }
+    }
+    if (o.hasOwnProperty("_")) {
+        console.log(exists + " exists.");
+        process.exit(0);
+    } else {
+        console.log(exists + " does not exist. Add it with zookin wordtree -a " + exists);
+        process.exit(1);
+    }
+}

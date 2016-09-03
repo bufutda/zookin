@@ -1,27 +1,30 @@
 #!/usr/bin/env node
+"use strict";
 var prgm = require("commander");
 var ctt = require("commander-tabtab");
-prgm.version("zookin v0.0.2 (aug'16)")
-    .usage("[-hV] <command> [-options] [--help]")
+prgm.version("zookin v0.0.2 (aug'16)").usage("[-hV] <command> [-options] [--help]");
 
-prgm.command("vigenere", "\033[33mcipher\033[0m: vigenere");
-prgm.command("rotate", "\033[33mcipher\033[0m: rotate");
-prgm.command("skip", "\033[33mcipher\033[0m: skip");
-prgm.command("score <text>", "view the score of a string of text");
-prgm.command("wordtree <dict>", "generate a new wordtree based on the dictionary");
-prgm.on("--help", function() {
+prgm.command("vigenere", "\x1b[33mcipher\x1b[0m: vigenere");
+prgm.command("rotate", "\x1b[33mcipher\x1b[0m: rotate");
+prgm.command("skip", "\x1b[33mcipher\x1b[0m: skip");
+prgm.command("score", "view the score of a string of text");
+prgm.command("wordtree", "generate a new wordtree based on the dictionary");
+
+prgm.on("--help", function () {
     for (var i = 0; i < prgm.args.length; i++) {
-        if (!/\-/.test(prgm.args[i])) {
-            console.error("  \033[31mUnknown command: " + prgm.args[i] + "\033[0m");
+        if ((!/\-/).test(prgm.args[i])) {
+            console.error("  \x1b[31mUnknown command: " + prgm.args[i] + "\x1b[0m");
             break;
         }
     }
 });
-ctt.init(prgm, 'zookin');
+ctt.init(prgm, "zookin");
 prgm.parse(process.argv);
-if (!prgm.hasOwnProperty("runningCommand"))
-    if (prgm.args[0] != "completion")
-    prgm.help();
+if (!prgm.hasOwnProperty("runningCommand")) {
+    if (prgm.args[0] !== "completion") {
+        prgm.help();
+    }
+}
 
 if (typeof process.argv[2] === "undefined") {
     prgm.help();

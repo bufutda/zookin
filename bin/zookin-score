@@ -1,19 +1,12 @@
 #!/usr/bin/env node
-
-var val = require(__dirname + "/../lib/validateString");
+"use strict";
+var utils = require(__dirname + "/../lib/utils");
 var prgm = require("commander");
+
 prgm.arguments("<text>")
-    .action(function(text) {
-        val(text, function(rank, split) {
-            console.log("'\033[33m" + text + "\033[0m' has a score of \033[31m" + (split.length - 1) + "-" + rank + "\033[0m (" + separateString(text, split) + ")");
+    .action(function (text) {
+        utils.validate(text, function (rank, split) {
+            console.log("'\x1b[33m" + text + "\x1b[0m' has a score of \x1b[31m" + (split.length - 1) + "-" + rank + "\x1b[0m (" + utils.separateString(text, split) + ")");
         });
     }
 ).parse(process.argv);
-
-function separateString (string, splits) {
-    var str = [];
-    for (var i = 0; i < splits.length - 1; i++) {
-        str.push(string.substring(splits[i], splits[i + 1]));
-    }
-    return str.join("\x1b[31m|\x1b[0m");
-}

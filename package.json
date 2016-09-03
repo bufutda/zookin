@@ -1,19 +1,20 @@
 {
-    "name": "zookin",
-    "version": "0.0.1",
-    "description": "A CLI cipher utility written in NodeJS",
-    "author": "bufutda <saw@tzky.ca>",
-    "bin": {
-        "zookin": "./bin/zookin"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/bufutda/zookin"
-    },
-    "license": "MIT",
-    "dependencies": {
-        "commander": "2.9.0",
-        "progress": "1.1.8",
-        "commander-tabtab": "0.1.0"
-    }
+  "name": "zookin",
+  "version": "0.0.1",
+  "description": "A CLI cipher utility written in NodeJS",
+  "author": "bufutda <saw@tzky.ca>",
+  "bin": {
+    "zookin": "./bin/zookin"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bufutda/zookin"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cli-table": "^0.3.1",
+    "commander": "2.9.0",
+    "commander-tabtab": "0.1.0",
+    "progress": "1.1.8"
+  }
 }
