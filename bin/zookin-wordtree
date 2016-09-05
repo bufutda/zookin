@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 "use strict";
 var fs = require("fs");
+var path = require("path");
 var prgm = require("commander");
+var read = require("read");
+var child_process = require("child_process");
 
 prgm.option("-g, --generate-from-file <path>", "Generate a new WordTree from the dictionary at <path>; save it to lib/dict/wordtree.json")
     .option("-a, --add <word>", "Add a word to the wordtree at lib/dict/wordtree.json")
     .option("-x, --exists <word>", "Check if a word is in the wordtree at lib/dict/wordtree.json")
+    .option("--export <path>", "Export the wordtree to the path specified")
+    .option("--import <path>", "Import the wordtree at the path specified")
     .parse(process.argv);
 
 if (prgm.generateFromFile) {
@@ -87,4 +92,128 @@ if (prgm.exists) {
         console.log(exists + " does not exist. Add it with zookin wordtree -a " + exists);
         process.exit(1);
     }
+}
+if (prgm.export) {
+    function overwriteFile (p) { // eslint-disable-line require-jsdoc
+        read({
+            prompt: "Overwrite \x1b[33m" + path.basename(p) + "\x1b[0m? [y/N] "
+        }, function (err, result, isDefault) {
+            if (err) {
+                throw err;
+            }
+            switch (result.toLowerCase()) {
+                case "n":
+                case "":
+                case "no":
+                    process.exit(0);
+                    break;
+                case "y":
+                case "yes":
+                    writeFile(p);
+                    break;
+                default:
+                    overwriteFile(p);
+                    break;
+            }
+        });
+    }
+    function checkDir (p) { // eslint-disable-line require-jsdoc
+        fs.stat(path.resolve(p + "/wordTree.gz"), function (err, stat) {
+            if (err) {
+                writeFile(path.resolve(p + "/wordTree.gz"));
+            } else if (stat.isDirectory()) {
+                console.error("\x1b[31mFatal\x1b[0m: " + path.resolve(p + "/wordTree.gz") + " is a directory");
+                process.exit(1);
+            } else if (stat.isFile()) {
+                overwriteFile(path.resolve(p + "/wordTree.gz"));
+            }
+        });
+    }
+    function writeFile (p) { // eslint-disable-line require-jsdoc
+        child_process.exec("gzip -9qc " + __dirname + "/../lib/dict/wordTree.json > " + p, function (err, stdout, stderr) {
+            if (err) {
+                throw err;
+            } else {
+                console.log("Exported wordTree to " + p);
+                process.exit(0);
+            }
+        });
+    }
+    var p = path.resolve(prgm.export);
+    fs.stat(p, function (err, stat) {
+        if (err) {
+            fs.stat(path.dirname(p), function (err, stat) {
+                if (err) {
+                    console.error("\x1b[31mFatal\x1b[0m: " + path.dirname(p) + " does not exist");
+                    process.exit(1);
+                } else if (stat.isDirectory()) {
+                    writeFile(p);
+                } else if (stat.isFile()) {
+                    console.error("\x1b[31mFatal\x1b[0m: " + p + " does not exist");
+                    process.exit(1);
+                }
+            });
+        } else if (stat.isDirectory()) {
+            checkDir(p);
+        } else if (stat.isFile()) {
+            overwriteFile(p);
+        }
+    });
+}
+if (prgm.import) {
+    var p = path.resolve(prgm.import);
+    fs.stat(p, function (err, stat) {
+        if (err) {
+            console.error("\x1b[31mFatal\x1b[0m: " + p + " does not exist");
+            process.exit(1);
+        } else if (stat.isDirectory()) {
+            console.error("\x1b[31mFatal\x1b[0m: " + p + " is a directory");
+        } else if (stat.isFile()) {
+            child_process.exec("gzip -dcN " + p + " > " + __dirname + "/tmp", function (err, stdout, stderr) {
+                if (err) {
+                    console.log("\x1b[31mFata\x1b[0m: " + p + " is not an exported wordTree");
+                    fs.unlink(__dirname + "/tmp");
+                    process.exit(1);
+                } else {
+                    fs.rename(__dirname + "/tmp", __dirname + "/../lib/dict/wordTree.json", function (err) {
+                        if (err) {
+                            throw err;
+                        } else {
+                            console.log("Imported new wordTree.");
+                            (function askDelete () {
+                                read({
+                                    prompt: "Delete \x1b[33m" + path.basename(p) + "\x1b[0m? [y/N] "
+                                }, function (err, response, isDefault) {
+                                    if (err) {
+                                        throw err;
+                                    } else {
+                                        switch (response.toLowerCase()) {
+                                            case "n":
+                                            case "no":
+                                            case "":
+                                                process.exit(0);
+                                                break;
+                                            case "y":
+                                            case "yes":
+                                                fs.unlink(p, function (err) {
+                                                    if (err) {
+                                                        throw err;
+                                                    } else {
+                                                        process.exit(0);
+                                                    }
+                                                });
+                                                break;
+                                            default:
+                                                askDelete();
+                                                break;
+                                        }
+                                    }
+                                });
+                            })();
+                        }
+                    });
+                }
+            });
+        }
+    });
 }
