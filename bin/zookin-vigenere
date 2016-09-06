@@ -39,7 +39,6 @@ if (prgm.bruteforce) {
     }
     var words = fs.readFileSync(prgm.passwordFile ? prgm.passwordFile : __dirname + "/../lib/dict/words2.txt").toString().split("\n");
     words.splice(0, 0, "");
-
     if (!prgm.hasOwnProperty("simple")) {
         process.stdout.write("\x1b[?25l");
         var bar = new ProgressBar("\x1b[35mVigenere\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
@@ -69,6 +68,7 @@ if (prgm.bruteforce) {
     }
 
     var counterIndex = 0;
+    var percent = 1;
     go.on("next", function () {
         if (!prgm.hasOwnProperty("simple")) {
             bar.tick({word: words[counterIndex].toLowerCase()});
@@ -90,6 +90,10 @@ if (prgm.bruteforce) {
                 }
             }
             counterIndex++;
+            if (prgm.hasOwnProperty("simple") && (counterIndex / words.length * 100) >= percent) {
+                console.log("-- " + counterIndex);
+                percent += 1;
+            }
             if (counterIndex < words.length) {
                 process.nextTick(function () {
                     go.emit("next");

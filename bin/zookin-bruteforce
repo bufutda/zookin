@@ -2,8 +2,7 @@
 "use strict";
 var utils = require(__dirname + "/../lib/utils");
 var child_process = require("child_process");
-var ProgressBar = require("progress");
-
+var multimeter = require("multimeter");
 var prgm = require("commander");
 prgm.option("-p, --password-file <path>", "Specify a password dictionary for bruteforcing")
     .option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
@@ -25,28 +24,38 @@ var children = {
     caesar: NaN,
     affine: NaN
 };
+var bars = {};
+var barData = {};
 for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
     top.push(["", 0, "", [], ""]);
 }
 function dataListener (data, origin, stream) { // eslint-disable-line require-jsdoc
     if (stream === "stderr") {
         process.stderr.write("[" + origin + "] ");
-        console.error(data);
+        multi.write(data);
+        multi.write("\n");
     } else {
         data = data.split(" ");
-        var d = {
-            class: data[0],
-            result: data[1],
-            score: data[2],
-            key: data[3]
-        };
-        data.splice(0, 4);
-        d.splits = data;
-        if (d.class === "super") {
-            superTop.push([d.result, d.score, d.key, d.splits, origin]);
-        } else if (d.splits.length > top[top.length - 1][3].length) {
-            if (d.score > top[top.length - 1][1]) {
-                utils.insert(top, d.result, d.score, d.key, d.splits, origin);
+        if (data[0].substr(0, 2) === "--") {
+            bars[origin].percent(bars[origin].progress.percent + 1, " " + (bars[origin].progress.percent + 1) + "% " + barData[origin].top[0] + "                              ");
+        } else {
+            var d = {
+                class: data[0],
+                result: data[1],
+                score: data[2],
+                key: data[3]
+            };
+            data.splice(0, 4);
+            d.splits = data;
+            if (d.class === "super") {
+                superTop.push([d.result, d.score, d.key, d.splits, origin]);
+            } else if (d.splits.length > top[top.length - 1][3].length) {
+                if (d.score > top[top.length - 1][1]) {
+                    utils.insert(top, d.result, d.score, d.key, d.splits, origin);
+                }
+            }
+            if ((d.splits.length > barData[origin].top[3].length) || (d.splits.length === barData[origin].top[3].length && d.score > barData[origin].top[1])) {
+                barData[origin].top = [(d.class === "super" ? "\x1b[32m" : "\x1b[31m") + d.result + "\x1b[0m", d.score, d.key, d.splits];
             }
         }
     }
@@ -67,13 +76,18 @@ function sd (data, origin, stream) {
     }
 }
 function closeListener (code, origin) { // eslint-disable-line require-jsdoc
-    bar.tick({word: superTop.length ? superTop[0][0] : top[0][0]});
     children[origin] = code;
+    if (code !== 0) {
+        bars[origin].percent(0, " 0% \x1b[33mFAILED\x1b[0m                              ");
+    } else {
+        bars[origin].percent(100, " 100% " + barData[origin].top[0]);
+    }
     for (var prop in children) {
         if (isNaN(children[prop])) {
             return;
         }
     }
+    multi.destroy();
     var tbl = new utils.Table({
         head: ["P%", "Key", "Result", "SplitLogic", "Cipher"]
     });
@@ -93,41 +107,40 @@ function closeListener (code, origin) { // eslint-disable-line require-jsdoc
             code++;
         }
     }
-    utils.shutdown(code);
 }
 
-process.stdout.write("\x1b[?25l");
-var bar = new ProgressBar("\x1b[35mBruteforce\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:elapsed\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
-    total: 5,
-    stream: process.stdout,
-    width: process.stdout.columns,
-    complete: "\x1b[32m█\x1b[0m",
-    incomplete: "\x1b[31m░\x1b[0m",
-    renderThrottle: 5000,
-    callback: function () {}
-});
-
-var vigenere = child_process.spawn("node", [__dirname + "/zookin-vigenere", "-p", prgm.passwordFile ? prgm.passwordFile : __dirname + "/../lib/dict/words2.txt", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]);
-vigenere.stdout.on("data", function (d) { sd(d, "vigenere", "stdout"); });
-vigenere.stderr.on("data", function (d) { sd(d, "vigenere", "stderr"); });
-vigenere.on("close", function (c) { closeListener(c, "vigenere"); });
-
-var rotate = child_process.spawn("node", [__dirname + "/zookin-rotate", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]);
-rotate.stdout.on("data", function (d) { sd(d, "rotate", "stdout"); });
-rotate.stderr.on("data", function (d) { sd(d, "rotate", "stderr"); });
-rotate.on("close", function (c) { closeListener(c, "rotate"); });
-
-var skip = child_process.spawn("node", [__dirname + "/zookin-skip", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]);
-skip.stdout.on("data", function (d) { sd(d, "skip", "stdout"); });
-skip.stderr.on("data", function (d) { sd(d, "skip", "stderr"); });
-skip.on("close", function (c) { closeListener(c, "skip"); });
-
-var caesar = child_process.spawn("node", [__dirname + "/zookin-caesar", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]);
-caesar.stdout.on("data", function (d) { sd(d, "caesar", "stdout"); });
-caesar.stderr.on("data", function (d) { sd(d, "caesar", "stderr"); });
-caesar.on("close", function (c) { closeListener(c, "caesar"); });
-
-var affine = child_process.spawn("node", [__dirname + "/zookin-affine", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]);
-affine.stdout.on("data", function (d) { sd(d, "affine", "stdout"); });
-affine.stderr.on("data", function (d) { sd(d, "affine", "stderr"); });
-affine.on("close", function (c) { closeListener(c, "affine"); });
+var multi = multimeter(process);
+multi.on("^C", process.exit);
+multi.charm.reset();
+multi.write("Running a bruteforce attack on \x1b[33m" + prgm.cipherText + "\x1b[0m\n");
+var setup = {
+    affine: [__dirname + "/zookin-affine", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
+    rotate: [__dirname + "/zookin-rotate", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
+    skip: [__dirname + "/zookin-skip", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
+    caesar: [__dirname + "/zookin-caesar", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
+    vigenere: [__dirname + "/zookin-vigenere", "-p", prgm.passwordFile ? prgm.passwordFile : __dirname + "/../lib/dict/words2.txt", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]
+};
+var ch = {};
+var c = 2;
+for (var prop in setup) {
+    (function (counter, prop) {
+        ch[prop] = child_process.spawn("node", setup[prop]);
+        ch[prop].stdout.on("data", function (d) { sd(d, prop, "stdout"); });
+        ch[prop].stderr.on("data", function (d) { sd(d, prop, "stderr"); });
+        ch[prop].on("close", function (c) { closeListener(c, prop); });
+        multi.write(prop.substr(0, 1).toUpperCase() + prop.substr(1) + ": \n");
+        bars[prop] = multi(12, counter++, {
+            width: 100,
+            solid: {foreground: "green", text: "█"},
+            empty: {foreground: "red", text: "░"},
+            before: "╢",
+            after: "\x1b[0m╟"
+        });
+        barData[prop] = {
+            total: null,
+            received: 0,
+            top: ["", 0, "", []]
+        };
+    })(c++, prop);
+}
+multi.write("\nWorking...\n");
