@@ -22,7 +22,8 @@ var children = {
     vigenere: NaN,
     rotate: NaN,
     skip: NaN,
-    caesar: NaN
+    caesar: NaN,
+    affine: NaN
 };
 for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
     top.push(["", 0, "", [], ""]);
@@ -44,7 +45,9 @@ function dataListener (data, origin, stream) { // eslint-disable-line require-js
         if (d.class === "super") {
             superTop.push([d.result, d.score, d.key, d.splits, origin]);
         } else if (d.splits.length > top[top.length - 1][3].length) {
-            utils.insert(top, d.result, d.score, d.key, d.splits, origin);
+            if (d.score > top[top.length - 1][1]) {
+                utils.insert(top, d.result, d.score, d.key, d.splits, origin);
+            }
         }
     }
 }
@@ -95,7 +98,7 @@ function closeListener (code, origin) { // eslint-disable-line require-jsdoc
 
 process.stdout.write("\x1b[?25l");
 var bar = new ProgressBar("\x1b[35mBruteforce\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:elapsed\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
-    total: 4,
+    total: 5,
     stream: process.stdout,
     width: process.stdout.columns,
     complete: "\x1b[32m█\x1b[0m",
@@ -123,3 +126,8 @@ var caesar = child_process.spawn("node", [__dirname + "/zookin-caesar", "-c", pr
 caesar.stdout.on("data", function (d) { sd(d, "caesar", "stdout"); });
 caesar.stderr.on("data", function (d) { sd(d, "caesar", "stderr"); });
 caesar.on("close", function (c) { closeListener(c, "caesar"); });
+
+var affine = child_process.spawn("node", [__dirname + "/zookin-affine", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]);
+affine.stdout.on("data", function (d) { sd(d, "affine", "stdout"); });
+affine.stderr.on("data", function (d) { sd(d, "affine", "stderr"); });
+affine.on("close", function (c) { closeListener(c, "affine"); });

@@ -2,14 +2,16 @@
 "use strict";
 var ProgressBar = require("progress");
 var Event = require("events").EventEmitter;
-var caesar = require(__dirname + "/../lib/cipher/CaesarShift");
+var affine = require(__dirname + "/../lib/cipher/Affine");
 var utils = require(__dirname + "/../lib/utils");
+var coprime = require(__dirname + "/../lib/cipher/Util").IsCoprime;
 
 var prgm = require("commander");
 prgm.option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
     .option("-e, --encrypt", "Encrypt the cipher text")
     .option("-d, --decrypt", "Decrypt the cipher text with the key")
-    .option("-k, --key <width>", "Key to use for encryption/decryption", parseInt)
+    .option("-1, --key-a <int>", "Key to use for encryption/decryption in the 'a' position", parseInt)
+    .option("-2, --key-b <int>", "Key to use for encryption/decryption in the 'b' position", parseInt)
     .option("-b, --bruteforce", "Attempt to bruteforce the cipher")
     .option("-t, --scoreboard <int>", "Number of entries to keep in the scoreboard (10)")
     .option("--simple", "Only log possible matches")
@@ -22,12 +24,12 @@ if (!prgm.hasOwnProperty("cipherText")) {
     prgm.cipherText = prgm.cipherText.replace(/ /gmi, "");
 }
 if (prgm.bruteforce) {
-    if (prgm.key || prgm.decrypt || prgm.encrypt) {
+    if (prgm.keyA || prgm.decrypt || prgm.encrypt || prgm.keyB) {
         console.error("Error: Incompatible switches");
         prgm.help();
     }
     if (!prgm.hasOwnProperty("simple")) {
-        console.log("Attempting to bruteforce CaesarShift Ciphertext: " + prgm.cipherText);
+        console.log("Attempting to bruteforce Affine Ciphertext: " + prgm.cipherText);
     }
     var go = new Event();
     var top = [];
@@ -37,8 +39,8 @@ if (prgm.bruteforce) {
     }
     if (!prgm.hasOwnProperty("simple")) {
         process.stdout.write("\x1b[?25l");
-        var bar = new ProgressBar("\x1b[35mCaesarShift\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
-            total: 26,
+        var bar = new ProgressBar("\x1b[35mAffine\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :a :b", {
+            total: 338,
             stream: process.stdout,
             width: process.stdout.columns,
             complete: "\x1b[32m█\x1b[0m",
@@ -63,29 +65,34 @@ if (prgm.bruteforce) {
         });
     }
 
-    var counterIndex = 0;
+    var counterIndexA = 1;
+    var counterIndexB = 0;
     go.on("next", function () {
         if (!prgm.hasOwnProperty("simple")) {
-            bar.tick({word: counterIndex});
+            bar.tick({a: counterIndexA, b: counterIndexB});
         }
-        var res = caesar(-1, prgm.cipherText, counterIndex);
+        var res = affine(-1, prgm.cipherText, counterIndexA, counterIndexB);
         utils.validate(res, function (sc, split, full) {
             if (full) {
                 if (prgm.hasOwnProperty("simple")) {
-                    console.log(["super", res, sc, counterIndex, split.join(" ")].join(" "));
+                    console.log(["super", res, sc, counterIndexA + ":" + counterIndexB, split.join(" ")].join(" "));
                 } else {
-                    superTop.push([res, sc, counterIndex, split]);
+                    superTop.push([res, sc, counterIndexA + ":" + counterIndexB, split]);
                 }
             } else if (split.length >= top[top.length - 1][3].length) {
                 if (sc > top[top.length - 1][1]) {
-                    utils.insert(top, res, sc, counterIndex, split);
+                    utils.insert(top, res, sc, counterIndexA + ":" + counterIndexB, split);
                     if (prgm.hasOwnProperty("simple")) {
-                        console.log(["top", res, sc, counterIndex, split.join(" ")].join(" "));
+                        console.log(["top", res, sc, counterIndexA + ":" + counterIndexB, split.join(" ")].join(" "));
                     }
                 }
             }
-            counterIndex++;
-            if (counterIndex <= 25) {
+            counterIndexB++;
+            if (counterIndexB > 25) {
+                counterIndexB = 0;
+                counterIndexA = getNextA(counterIndexA);
+            }
+            if (counterIndexA < 28) {
                 process.nextTick(function () {
                     go.emit("next");
                 });
@@ -98,7 +105,31 @@ if (prgm.bruteforce) {
 
     utils.listenForExit();
 } else if (prgm.encrypt) {
-    console.log(caesar(1, prgm.cipherText, prgm.key ? prgm.key : 12));
+    if (prgm.keyA) {
+        if (!coprime(prgm.keyA, 26)) {
+            console.error("\x1b[31mFatal\x1b[0m: The A key must be coprime with 26");
+            process.exit(1);
+        }
+    }
+    console.log(affine(1, prgm.cipherText, prgm.keyA ? prgm.keyA : 69, prgm.keyB ? prgm.keyB : 12));
 } else if (prgm.decrypt) {
-    console.log(caesar(-1, prgm.cipherText, prgm.key ? prgm.key : 4));
+    if (prgm.keyA) {
+        if (!coprime(prgm.keyA, 26)) {
+            console.error("\x1b[31mFatal\x1b[0m: The A key must be coprime with 26");
+            process.exit(1);
+        }
+    }
+    console.log(affine(-1, prgm.cipherText, prgm.keyA ? prgm.keyA : 69, prgm.keyB ? prgm.keyB : 12));
+}
+
+/**
+ * Retreive the next coprime-26 number
+ * @param {Integer} prevA - the previous coprime-26 number
+ * @returns {Integer} - the next coprime-26 number
+ */
+function getNextA (prevA) {
+    do {
+        prevA++;
+    } while (!coprime(prevA, 26));
+    return prevA;
 }

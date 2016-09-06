@@ -7,6 +7,7 @@ prgm.command("vigenere", "\x1b[33mcipher\x1b[0m: vigenere");
 prgm.command("caesar", "\x1b[33mcipher\x1b[0m: Caesarean Shift");
 prgm.command("rotate", "\x1b[33mcipher\x1b[0m: rotate");
 prgm.command("skip", "\x1b[33mcipher\x1b[0m: skip");
+prgm.command("affine", "\x1b[33mcipher\x1b[0m: affine");
 prgm.command("score", "view the score of a string of text");
 prgm.command("wordtree", "generate a new wordtree based on the dictionary");
 prgm.command("bruteforce", "Invoke every implemented \x1b[33mcipher\x1b[0m in bruteforce mode, and collect the results");
