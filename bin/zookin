@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 var prgm = require("commander");
-var ctt = require("commander-tabtab");
-prgm.version("zookin v0.0.2 (aug'16)").usage("[-hV] <command> [-options] [--help]");
+prgm.version("zookin v0.0.3 (sept'16)").usage("[-hV] <command> [-options] [--help]");
 
 prgm.command("vigenere", "\x1b[33mcipher\x1b[0m: vigenere");
+prgm.command("caesar", "\x1b[33mcipher\x1b[0m: Caesarean Shift");
 prgm.command("rotate", "\x1b[33mcipher\x1b[0m: rotate");
 prgm.command("skip", "\x1b[33mcipher\x1b[0m: skip");
 prgm.command("score", "view the score of a string of text");
@@ -19,7 +19,6 @@ prgm.on("--help", function () {
         }
     }
 });
-ctt.init(prgm, "zookin");
 prgm.parse(process.argv);
 if (!prgm.hasOwnProperty("runningCommand")) {
     if (prgm.args[0] !== "completion") {

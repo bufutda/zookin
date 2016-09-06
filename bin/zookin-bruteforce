@@ -21,7 +21,8 @@ var superTop = [];
 var children = {
     vigenere: NaN,
     rotate: NaN,
-    skip: NaN
+    skip: NaN,
+    caesar: NaN
 };
 for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
     top.push(["", 0, "", [], ""]);
@@ -94,7 +95,7 @@ function closeListener (code, origin) { // eslint-disable-line require-jsdoc
 
 process.stdout.write("\x1b[?25l");
 var bar = new ProgressBar("\x1b[35mBruteforce\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:elapsed\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
-    total: 3,
+    total: 4,
     stream: process.stdout,
     width: process.stdout.columns,
     complete: "\x1b[32m█\x1b[0m",
@@ -117,3 +118,8 @@ var skip = child_process.spawn("node", [__dirname + "/zookin-skip", "-c", prgm.c
 skip.stdout.on("data", function (d) { sd(d, "skip", "stdout"); });
 skip.stderr.on("data", function (d) { sd(d, "skip", "stderr"); });
 skip.on("close", function (c) { closeListener(c, "skip"); });
+
+var caesar = child_process.spawn("node", [__dirname + "/zookin-caesar", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]);
+caesar.stdout.on("data", function (d) { sd(d, "caesar", "stdout"); });
+caesar.stderr.on("data", function (d) { sd(d, "caesar", "stderr"); });
+caesar.on("close", function (c) { closeListener(c, "caesar"); });
