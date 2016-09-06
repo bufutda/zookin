@@ -1,0 +1,124 @@
+#!/usr/bin/env node
+"use strict";
+var ProgressBar = require("progress");
+var Event = require("events").EventEmitter;
+var bifid = require(__dirname + "/../lib/cipher/bifid");
+var utils = require(__dirname + "/../lib/utils");
+
+var prgm = require("commander");
+prgm.option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
+    .option("-e, --encrypt", "Encrypt the cipher text")
+    .option("-d, --decrypt", "Decrypt the cipher text with the key")
+    .option("-1, --key-a <letter>", "Letter to remove from tableu")
+    .option("-2, --key-b <letter>", "Letter to map to the removed letter")
+    .option("-b, --bruteforce", "Attempt to bruteforce the cipher")
+    .option("-t, --scoreboard <int>", "Number of entries to keep in the scoreboard (10)")
+    .option("--simple", "Only log possible matches")
+    .parse(process.argv);
+
+if (!prgm.hasOwnProperty("cipherText")) {
+    console.error("Error: Required switch: -c");
+    prgm.help();
+} else {
+    prgm.cipherText = prgm.cipherText.replace(/ /gmi, "");
+}
+if (prgm.bruteforce) {
+    if (prgm.keyA || prgm.decrypt || prgm.encrypt || prgm.keyB) {
+        console.error("Error: Incompatible switches");
+        prgm.help();
+    }
+    if (!prgm.hasOwnProperty("simple")) {
+        console.log("Attempting to bruteforce Bifid Ciphertext: " + prgm.cipherText);
+    }
+    var go = new Event();
+    var top = [];
+    var superTop = [];
+    for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
+        top.push(["", 0, "", []]);
+    }
+    if (!prgm.hasOwnProperty("simple")) {
+        process.stdout.write("\x1b[?25l");
+        var bar = new ProgressBar("\x1b[35mBifid\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
+            total: 676,
+            stream: process.stdout,
+            width: process.stdout.columns,
+            complete: "\x1b[32m█\x1b[0m",
+            incomplete: "\x1b[31m░\x1b[0m",
+            renderThrottle: 5000,
+            callback: function () {
+                console.log("");
+                var tbl = new utils.Table({
+                    head: ["P%", "Shift Amount", "Result", "SplitLogic"]
+                });
+                for (var i = 0; i < superTop.length; i++) {
+                    tbl.push(["\x1b[32m" + Math.floor(100 * superTop[i][1] / top[0][1]), "\x1b[32m" + superTop[i][2], "\x1b[32m" + superTop[i][0], utils.separateString(superTop[i][0], superTop[i][3])]);
+                }
+                for (var i = 0; i < top.length; i++) {
+                    if (top[i][1]) {
+                        tbl.push([Math.floor(100 * top[i][1] / top[0][1]), top[i][2], top[i][0], utils.separateString(top[i][0], top[i][3])]);
+                    }
+                }
+                console.log(tbl.toString());
+                utils.shutdown();
+            }
+        });
+    }
+
+    var counterIndexA = 0;
+    var counterIndexB = 0;
+    var counterIndex = 0;
+    var percent = 1;
+    go.on("next", function () {
+        if (!prgm.hasOwnProperty("simple")) {
+            bar.tick({word: String.fromCharCode(97 + counterIndexA).toUpperCase() + " => " + String.fromCharCode(97 + counterIndexB).toUpperCase()});
+        }
+        var res = bifid(-1, prgm.cipherText, String.fromCharCode(97 + counterIndexA).toUpperCase(), String.fromCharCode(97 + counterIndexB).toUpperCase());
+        utils.validate(res, function (sc, split, full) {
+            if (full) {
+                var insert = true;
+                for (var i = 0; i < superTop.length; i++) {
+                    if (superTop[i][0] === res) {
+                        insert = false;
+                    }
+                }
+                if (insert) {
+                    superTop.push([res, sc, String.fromCharCode(97 + counterIndexA).toUpperCase() + " => " + String.fromCharCode(97 + counterIndexB).toUpperCase(), split]);
+                    if (prgm.hasOwnProperty("simple")) {
+                        console.log(["super", res, sc, String.fromCharCode(97 + counterIndexA).toUpperCase() + "->" + String.fromCharCode(97 + counterIndexB).toUpperCase(), split.join(" ")].join(" "));
+                    }
+                }
+            } else if (split.length >= top[top.length - 1][3].length) {
+                if (sc > top[top.length - 1][1]) {
+                    utils.insert(top, res, sc, String.fromCharCode(97 + counterIndexA).toUpperCase() + " => " + String.fromCharCode(97 + counterIndexB).toUpperCase(), split);
+                    if (prgm.hasOwnProperty("simple")) {
+                        console.log(["top", res, sc, String.fromCharCode(97 + counterIndexA).toUpperCase() + "->" + String.fromCharCode(97 + counterIndexB).toUpperCase(), split.join(" ")].join(" "));
+                    }
+                }
+            }
+            counterIndex++;
+            counterIndexB++;
+            if (counterIndexB === 26) {
+                counterIndexB = 0;
+                counterIndexA++;
+            }
+            if (prgm.hasOwnProperty("simple") && (counterIndex / 676 * 100) > percent) {
+                console.log("--");
+                percent++;
+            }
+            if (counterIndex < 676) {
+                process.nextTick(function () {
+                    go.emit("next");
+                });
+            } else {
+                process.exit(0);
+            }
+        });
+    });
+    go.emit("next");
+
+    utils.listenForExit();
+} else if (prgm.encrypt) {
+    console.log(bifid(1, prgm.cipherText, prgm.keyA ? prgm.keyA : "J", prgm.keyB ? prgm.keyB : "I"));
+} else if (prgm.decrypt) {
+    console.log(bifid(-1, prgm.cipherText, prgm.keyA ? prgm.keyA : "J", prgm.keyB ? prgm.keyB : "I"));
+}

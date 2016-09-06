@@ -17,13 +17,7 @@ if (!prgm.hasOwnProperty("cipherText")) {
 }
 var top = [];
 var superTop = [];
-var children = {
-    vigenere: NaN,
-    rotate: NaN,
-    skip: NaN,
-    caesar: NaN,
-    affine: NaN
-};
+var children = {};
 var bars = {};
 var barData = {};
 for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
@@ -107,6 +101,7 @@ function closeListener (code, origin) { // eslint-disable-line require-jsdoc
             code++;
         }
     }
+    console.log("Operation took " + process.uptime() + "s");
 }
 
 var multi = multimeter(process);
@@ -118,12 +113,14 @@ var setup = {
     rotate: [__dirname + "/zookin-rotate", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
     skip: [__dirname + "/zookin-skip", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
     caesar: [__dirname + "/zookin-caesar", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
-    vigenere: [__dirname + "/zookin-vigenere", "-p", prgm.passwordFile ? prgm.passwordFile : __dirname + "/../lib/dict/words2.txt", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]
+    vigenere: [__dirname + "/zookin-vigenere", "-p", prgm.passwordFile ? prgm.passwordFile : __dirname + "/../lib/dict/words2.txt", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
+    bifid: [__dirname + "/zookin-bifid", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]
 };
 var ch = {};
 var c = 2;
 for (var prop in setup) {
     (function (counter, prop) {
+        children[prop] = NaN;
         ch[prop] = child_process.spawn("node", setup[prop]);
         ch[prop].stdout.on("data", function (d) { sd(d, prop, "stdout"); });
         ch[prop].stderr.on("data", function (d) { sd(d, prop, "stderr"); });
