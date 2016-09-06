@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-
-var ProgressBar = require('progress');
-var fs = require("fs");
+"use strict";
+var ProgressBar = require("progress");
 var Event = require("events").EventEmitter;
 var skip = require(__dirname + "/../lib/cipher/Skip");
-var validate = require(__dirname + "/../lib/validateString");
+var utils = require(__dirname + "/../lib/utils");
 
 var prgm = require("commander");
 prgm.option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
@@ -12,7 +11,8 @@ prgm.option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
     .option("-d, --decrypt", "Set mode to decrypt")
     .option("-k, --key <skip num>", "Number of letters to skip for encryption/decryption", parseInt)
     .option("-b, --bruteforce", "Attempt to bruteforce the cipher")
-    .option("--depth <int>", "Specify the depth of word requirement", parseInt)
+    .option("-t, --scoreboard", "The number of entries to keep on the scoreboard (10)")
+    .option("--simple", "Only log competing entries to stdout")
     .parse(process.argv);
 
 if (!prgm.hasOwnProperty("cipherText")) {
@@ -24,64 +24,87 @@ if (prgm.bruteforce) {
         console.error("Error: Incompatible switches");
         prgm.help();
     }
-    console.log("Attempting to bruteforce Skip Ciphertext: " + prgm.cipherText);
+    if (!prgm.hasOwnProperty("simple")) {
+        console.log("Attempting to bruteforce Skip Ciphertext: " + prgm.cipherText);
+    }
     var go = new Event();
     var top = [];
-    for (var i = 0; i < 25; i++)
-        top.push(["", 0, 0]);
-    function insert(string, score, key) {
-        for (var i = 0; i < top.length; i++) {
-            if (score > top[i][1]) {
-                top[i] = [string, score, key];
-                break;
+    var superTop = [];
+    for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
+        top.push(["", 0, 0, []]);
+    }
+    if (!prgm.hasOwnProperty("simple")) {
+        process.stdout.write("\x1b[?25l");
+        var bar = new ProgressBar("\x1b[35mSkip\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
+            total: prgm.cipherText.length,
+            stream: process.stdout,
+            width: process.stdout.columns,
+            complete: "\x1b[32m█\x1b[0m",
+            incomplete: "\x1b[31m░\x1b[0m",
+            renderThrottle: 5000,
+            callback: function () {
+                var tbl = new utils.Table({
+                    head: ["P%", "Skip Amount", "Result", "SplitLogic"]
+                });
+                for (var i = 0; i < superTop.length; i++) {
+                    tbl.push(["\x1b[32m" + Math.floor(100 * superTop[i][1] / top[0][1]), "\x1b[32m" + superTop[i][2], "\x1b[32m" + superTop[i][0], utils.separateString(superTop[i][0], superTop[i][3])]);
+                }
+                for (var i = 0; i < top.length; i++) {
+                    if (top[i][1]) {
+                        tbl.push([Math.floor(100 * top[i][1] / top[0][1]), top[i][2], top[i][0], utils.separateString(top[i][0], top[i][3])]);
+                    }
+                }
+                console.log(tbl.toString());
+                utils.shutdown();
             }
-        }
+        });
     }
-    function shutdown() {
-        process.stdout.write("\x1b[?25h");
-        process.stdout.write("\x1b[0m\n");
-        process.exit();
-    }
-
-    process.stdout.write("\x1b[?25l");
-    var bar = new ProgressBar('\x1b[35mSkip\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word', {
-        total: prgm.cipherText.length,
-        stream: process.stdout,
-        width: process.stdout.columns,
-        complete: "\x1b[32m█\x1b[0m",
-        incomplete: "\x1b[31m░\x1b[0m",
-        renderThrottle: 5000,
-        callback: function() {
-            console.log("");
-            console.log("(p%)\trank. passphrase used: resultant text\x1b[32m");
-            for (var i = 0; i < top.length; i++)
-                if (top[i][1])
-                    console.log("(" + Math.floor(100 * top[i][1] / top[0][1]) + ")\t" + (i+1) + ". " + top[i][2] +  ": " + top[i][0] + "\x1b[0m");
-            shutdown();
-        }
-    });
 
     var counterIndex = 0;
-    go.on("next", function() {
-        bar.tick({word: counterIndex});
+    go.on("next", function () {
+        if (!prgm.hasOwnProperty("simple")) {
+            bar.tick({word: counterIndex});
+        }
         var res = skip(-1, prgm.cipherText, counterIndex, 0);
         if (res) {
-            var sc = validate(res, prgm.depth ? prgm.depth : 1);
-            if (sc > top[top.length-1][1]) {
-                insert(res,sc,counterIndex);
+            utils.validate(res, function (sc, split, full) {
+                if (full) {
+                    if (prgm.hasOwnProperty("simple")) {
+                        console.log(["super", res, sc, counterIndex, split.join(" ")].join(" "));
+                    } else {
+                        superTop.push([res, sc, counterIndex, split]);
+                    }
+                } else if (split.length >= top[top.length - 1][3].length) {
+                    if (sc > top[top.length - 1][1]) {
+                        utils.insert(top, res, sc, counterIndex, split);
+                        if (prgm.hasOwnProperty("simple")) {
+                            console.log(["top", res, sc, counterIndex, split.join(" ")].join(" "));
+                        }
+                    }
+                }
+                counterIndex++;
+                if (counterIndex < prgm.cipherText.length) {
+                    process.nextTick(function () {
+                        go.emit("next");
+                    });
+                } else {
+                    process.exit(0);
+                }
+            });
+        } else {
+            counterIndex++;
+            if (counterIndex < prgm.cipherText.length) {
+                process.nextTick(function () {
+                    go.emit("next");
+                });
+            } else {
+                process.exit(0);
             }
         }
-        counterIndex++;
-        if (counterIndex < prgm.cipherText.length)
-            process.nextTick(function() {
-                go.emit("next");
-            });
     });
     go.emit("next");
 
-    process.on("exit", shutdown);
-    process.on("SIGINT", shutdown);
-    process.on("SIGHUP", shutdown);
+    utils.listenForExit();
 } else if (prgm.encrypt) {
     console.log(skip(1, prgm.cipherText, prgm.key ? prgm.key : 1, 0));
 } else if (prgm.decrypt) {

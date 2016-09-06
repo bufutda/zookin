@@ -11,6 +11,8 @@ prgm.option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
     .option("-d, --decrypt", "Set mode to rotate left")
     .option("-k, --key <width>", "Box width to use for encryption/decryption", parseInt)
     .option("-b, --bruteforce", "Attempt to bruteforce the cipher")
+    .option("-t, --scoreboard <int>", "Number of entries to keep in the scoreboard (10)")
+    .option("--simple", "Only log possible matches")
     .parse(process.argv);
 
 if (!prgm.hasOwnProperty("cipherText")) {
@@ -24,61 +26,75 @@ if (prgm.bruteforce) {
         console.error("Error: Incompatible switches");
         prgm.help();
     }
-    console.log("Attempting to bruteforce Rotate Ciphertext: " + prgm.cipherText);
+    if (!prgm.hasOwnProperty("simple")) {
+        console.log("Attempting to bruteforce Rotate Ciphertext: " + prgm.cipherText);
+    }
     var go = new Event();
     var top = [];
-    var superTop;
-    for (var i = 0; i < 25; i++) {
+    var superTop = [];
+    for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
         top.push(["", 0, "", []]);
     }
-    process.stdout.write("\x1b[?25l");
-    var bar = new ProgressBar("\x1b[35mRotate\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
-        total: 200,
-        stream: process.stdout,
-        width: process.stdout.columns,
-        complete: "\x1b[32m█\x1b[0m",
-        incomplete: "\x1b[31m░\x1b[0m",
-        renderThrottle: 5000,
-        callback: function () {
-            console.log("");
-            var tbl = new utils.Table({
-                head: ["P%", "Box Width (Direction)", "Result", "SplitLogic"]
-            });
-            for (var i = 0; i < superTop.length; i++) {
-                tbl.push(["\x1b[32m" + Math.floor(100 * superTop[i][1] / top[0][1]), "\x1b[32m" + superTop[i][2], "\x1b[32m" + superTop[i][0], utils.separateString(superTop[i][0], superTop[i][3])]);
-            }
-            for (var i = 0; i < top.length; i++) {
-                if (top[i][1]) {
-                    tbl.push([Math.floor(100 * top[i][1] / top[0][1]), top[i][2], top[i][0], utils.separateString(top[i][0], top[i][3])]);
+    if (!prgm.hasOwnProperty("simple")) {
+        process.stdout.write("\x1b[?25l");
+        var bar = new ProgressBar("\x1b[35mRotate\x1b[0m    [\x1b[34m:current\x1b[0m / \x1b[34m:total\x1b[0m][\x1b[34m:percent\x1b[0m][\x1b[34m:elapsed\x1b[0ms - \x1b[34m:eta\x1b[0ms] \x1b[33m╢\x1b[0m:bar\x1b[33m╟\x1b[0m :word", {
+            total: prgm.cipherText.length * 2,
+            stream: process.stdout,
+            width: process.stdout.columns,
+            complete: "\x1b[32m█\x1b[0m",
+            incomplete: "\x1b[31m░\x1b[0m",
+            renderThrottle: 5000,
+            callback: function () {
+                console.log("");
+                var tbl = new utils.Table({
+                    head: ["P%", "Box Width (Direction)", "Result", "SplitLogic"]
+                });
+                for (var i = 0; i < superTop.length; i++) {
+                    tbl.push(["\x1b[32m" + Math.floor(100 * superTop[i][1] / top[0][1]), "\x1b[32m" + superTop[i][2], "\x1b[32m" + superTop[i][0], utils.separateString(superTop[i][0], superTop[i][3])]);
                 }
+                for (var i = 0; i < top.length; i++) {
+                    if (top[i][1]) {
+                        tbl.push([Math.floor(100 * top[i][1] / top[0][1]), top[i][2], top[i][0], utils.separateString(top[i][0], top[i][3])]);
+                    }
+                }
+                console.log(tbl.toString());
+                utils.shutdown();
             }
-            console.log(tbl.toString());
-            utils.shutdown();
-            utils.shutdown();
-        }
-    });
+        });
+    }
 
     var counterIndex = 0;
     var mode = -1;
     go.on("next", function () {
-        bar.tick({word: (counterIndex % 100) + "(" + mode + ")"});
-        var res = rotate(mode, prgm.cipherText, counterIndex);
+        if (!prgm.hasOwnProperty("simple")) {
+            bar.tick({word: (counterIndex % prgm.cipherText.length) + "(" + mode + ")"});
+        }
+        var res = rotate(mode, prgm.cipherText, counterIndex % prgm.cipherText.length);
         utils.validate(res, function (sc, split, full) {
             if (full) {
-                superTop.push([res, sc, counterIndex + "(" + mode + ")", split]);
+                if (prgm.hasOwnProperty("simple")) {
+                    console.log(["super", res, sc, (counterIndex % prgm.cipherText.length) + ":" + mode, split.join(" ")].join(" "));
+                } else {
+                    superTop.push([res, sc, (counterIndex % prgm.cipherText.length) + "(" + mode + ")", split]);
+                }
             } else if (split.length >= top[top.length - 1][3].length) {
                 if (sc > top[top.length - 1][1]) {
-                    utils.insert(top, res, sc, counterIndex + "(" + mode + ")", split);
+                    utils.insert(top, res, sc, (counterIndex % prgm.cipherText.length) + "(" + mode + ")", split);
+                    if (prgm.hasOwnProperty("simple")) {
+                        console.log(["top", res, sc, (counterIndex % prgm.cipherText.length) + ":" + mode, split.join(" ")].join(" "));
+                    }
                 }
-                counterIndex++;
-                if (counterIndex === 100) {
-                    mode = 1;
-                }
-                if (counterIndex < 200) {
-                    process.nextTick(function () {
-                        go.emit("next");
-                    });
-                }
+            }
+            counterIndex++;
+            if (counterIndex === prgm.cipherText.length + 1) {
+                mode = 1;
+            }
+            if (counterIndex < (prgm.cipherText.length * 2)) {
+                process.nextTick(function () {
+                    go.emit("next");
+                });
+            } else {
+                process.exit(0);
             }
         });
     });
