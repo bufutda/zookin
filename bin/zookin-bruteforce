@@ -74,7 +74,7 @@ function closeListener (code, origin) { // eslint-disable-line require-jsdoc
     if (code !== 0) {
         bars[origin].percent(0, " 0% \x1b[33mFAILED\x1b[0m                              ");
     } else {
-        bars[origin].percent(100, " 100% " + barData[origin].top[0]);
+        bars[origin].percent(100, " 100% " + barData[origin].top[0] + " " + process.uptime() + "s");
     }
     for (var prop in children) {
         if (isNaN(children[prop])) {
@@ -114,7 +114,8 @@ var setup = {
     skip: [__dirname + "/zookin-skip", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
     caesar: [__dirname + "/zookin-caesar", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
     vigenere: [__dirname + "/zookin-vigenere", "-p", prgm.passwordFile ? prgm.passwordFile : __dirname + "/../lib/dict/words2.txt", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
-    bifid: [__dirname + "/zookin-bifid", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]
+    bifid: [__dirname + "/zookin-bifid", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
+    playfair: [__dirname + "/zookin-playfair", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"]
 };
 var ch = {};
 var c = 2;
