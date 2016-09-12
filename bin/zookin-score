@@ -3,6 +3,7 @@
 var utils = require(__dirname + "/../lib/utils");
 var prgm = require("commander");
 
+prgm.option("--table", "DO-NOT-USE");
 prgm.arguments("<text>")
     .action(function (text) {
         utils.validate(text, function (rank, split) {

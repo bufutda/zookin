@@ -2,12 +2,15 @@
 "use strict";
 var utils = require(__dirname + "/../lib/utils");
 var child_process = require("child_process");
-var multimeter = require("multimeter");
 var prgm = require("commander");
 prgm.option("-p, --password-file <path>", "Specify a password dictionary for bruteforcing")
     .option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
     .option("-t, --scoreboard <int>", "Number of entries to keep in the scoreboard (10)")
+    .option("--table", "Output in table mode")
     .parse(process.argv);
+if (!prgm.hasOwnProperty("table")) {
+    var multimeter = require("multimeter");
+}
 
 if (!prgm.hasOwnProperty("cipherText")) {
     console.error("Error: Required switch: -c");
@@ -26,12 +29,16 @@ for (var i = 0; i < (prgm.scoreboard ? prgm.scoreboard : 10); i++) {
 function dataListener (data, origin, stream) { // eslint-disable-line require-jsdoc
     if (stream === "stderr") {
         process.stderr.write("[" + origin + "] ");
-        multi.write(data);
-        multi.write("\n");
+        if (!prgm.hasOwnProperty("table")) {
+            multi.write(data);
+            multi.write("\n");
+        }
     } else {
         data = data.split(" ");
         if (data[0].substr(0, 2) === "--") {
-            bars[origin].percent(bars[origin].progress.percent + 1, " " + (bars[origin].progress.percent + 1) + "% " + barData[origin].top[0] + "                              ");
+            if (!prgm.hasOwnProperty("table")) {
+                bars[origin].percent(bars[origin].progress.percent + 1, " " + (bars[origin].progress.percent + 1) + "% " + barData[origin].top[0] + "                              ");
+            }
         } else {
             var d = {
                 class: data[0],
@@ -71,17 +78,21 @@ function sd (data, origin, stream) {
 }
 function closeListener (code, origin) { // eslint-disable-line require-jsdoc
     children[origin] = code;
-    if (code !== 0) {
-        bars[origin].percent(0, " 0% \x1b[33mFAILED\x1b[0m                              ");
-    } else {
-        bars[origin].percent(100, " 100% " + barData[origin].top[0] + " " + process.uptime() + "s");
+    if (!prgm.hasOwnProperty("table")) {
+        if (code !== 0) {
+            bars[origin].percent(0, " 0% \x1b[33mFAILED\x1b[0m                              ");
+        } else {
+            bars[origin].percent(100, " 100% " + barData[origin].top[0] + " " + process.uptime() + "s");
+        }
     }
     for (var prop in children) {
         if (isNaN(children[prop])) {
             return;
         }
     }
-    multi.destroy();
+    if (!prgm.hasOwnProperty("table")) {
+        multi.destroy();
+    }
     var tbl = new utils.Table({
         head: ["P%", "Key", "Result", "SplitLogic", "Cipher"]
     });
@@ -104,10 +115,12 @@ function closeListener (code, origin) { // eslint-disable-line require-jsdoc
     console.log("Operation took " + process.uptime() + "s");
 }
 
-var multi = multimeter(process);
-multi.on("^C", process.exit);
-multi.charm.reset();
-multi.write("Running a bruteforce attack on \x1b[33m" + prgm.cipherText + "\x1b[0m\n");
+if (!prgm.hasOwnProperty("table")) {
+    var multi = multimeter(process);
+    multi.on("^C", process.exit);
+    multi.charm.reset();
+    multi.write("Running a bruteforce attack on \x1b[33m" + prgm.cipherText + "\x1b[0m\n");
+}
 var setup = {
     affine: [__dirname + "/zookin-affine", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
     rotate: [__dirname + "/zookin-rotate", "-c", prgm.cipherText, "-b", "-t", prgm.scoreboard ? prgm.scoreboard : "10", "--simple"],
@@ -126,14 +139,16 @@ for (var prop in setup) {
         ch[prop].stdout.on("data", function (d) { sd(d, prop, "stdout"); });
         ch[prop].stderr.on("data", function (d) { sd(d, prop, "stderr"); });
         ch[prop].on("close", function (c) { closeListener(c, prop); });
-        multi.write(prop.substr(0, 1).toUpperCase() + prop.substr(1) + ": \n");
-        bars[prop] = multi(12, counter++, {
-            width: 100,
-            solid: {foreground: "green", text: "█"},
-            empty: {foreground: "red", text: "░"},
-            before: "╢",
-            after: "\x1b[0m╟"
-        });
+        if (!prgm.hasOwnProperty("table")) {
+            multi.write(prop.substr(0, 1).toUpperCase() + prop.substr(1) + ": \n");
+            bars[prop] = multi(12, counter++, {
+                width: 100,
+                solid: {foreground: "green", text: "█"},
+                empty: {foreground: "red", text: "░"},
+                before: "╢",
+                after: "\x1b[0m╟"
+            });
+        }
         barData[prop] = {
             total: null,
             received: 0,
@@ -141,4 +156,6 @@ for (var prop in setup) {
         };
     })(c++, prop);
 }
-multi.write("\nWorking...\n");
+if (!prgm.hasOwnProperty("table")) {
+    multi.write("\nWorking...\n");
+}

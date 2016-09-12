@@ -11,6 +11,7 @@ prgm.option("-g, --generate-from-file <path>", "Generate a new WordTree from the
     .option("-x, --exists <word>", "Check if a word is in the wordtree at lib/dict/wordtree.json")
     .option("--export <path>", "Export the wordtree to the path specified")
     .option("--import <path>", "Import the wordtree at the path specified")
+    .option("--table", "DO-NOT-USE")
     .parse(process.argv);
 
 if (prgm.generateFromFile) {

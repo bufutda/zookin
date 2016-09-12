@@ -1,0 +1,316 @@
+#!/usr/bin/env node
+"use strict";
+var fs = require("fs");
+var prgm = require("commander");
+var log = require(__dirname + "/../lib/log");
+var child_process = require("child_process");
+var read = require("read");
+var userCache = {};
+var http, https;
+log.init();
+
+prgm.option("-s, --start", "Start Zookin Web Service")
+    .option("-k, --stop", "Stop Zookin Web Service")
+    .option("-p, --port <port>", "The port to start the service (8069)", parseInt)
+    .option("--protocol <HTTPS|HTTP>", "The protocol to use (HTTP)")
+    .option("--key", "The path to the SSL key of the domain, if using HTTPS")
+    .option("--cert", "The path to the SSL certificate of the domain, if using HTTPS")
+    .option("--add-user", "Add a new user")
+    .option("--del-user", "Delete a user")
+    .option("--list-users", "List all the users")
+    .option("--table", "DO-NOT-USE")
+    .parse(process.argv);
+
+if (prgm.hasOwnProperty("table")) {
+    console.error("\x1b[31mFatal\x1b[0m: Cannot access Zookin Web Service while inside Zookin Web Service");
+    process.exit(1);
+}
+
+if (prgm.hasOwnProperty("addUser")) {
+    (function getUsername () {
+        read({
+            prompt: "username> "
+        }, function (err, result, isDefault) {
+            if (err) {
+                console.err(err);
+                process.exit(1);
+            } else if (result.trim().length) {
+                var username = result.trim().toLowerCase();
+                (function getPassword () {
+                    read({
+                        prompt: "password> ",
+                        silent: true
+                    }, function (err, result, isDefault) {
+                        if (err) {
+                            console.err(err);
+                            process.exit(1);
+                        } else if (result.trim().length) {
+                            var password = result.trim();
+                            (function confirmPassword () {
+                                read({
+                                    prompt: "confirm password> ",
+                                    silent: true
+                                }, function (err, result, isDefault) {
+                                    if (err) {
+                                        console.err(err);
+                                        process.exit(1);
+                                    } else if (result.trim().length && result.trim() === password) {
+                                        var users = require(__dirname + "/../lib/html/users.json");
+                                        if (users.hasOwnProperty("username")) {
+                                            console.error("\x1b[31m;Fatal\x1b[0m: User " + username + " already exists");
+                                            process.exit(1);
+                                        } else {
+                                            users[username] = password;
+                                            fs.writeFileSync(__dirname + "/../lib/html/users.json", JSON.stringify(users));
+                                            console.log("Added user: " + username);
+                                            process.exit(0);
+                                        }
+                                    } else {
+                                        console.error("\x1b[31mFatal\x1b[0m: Passwords don't match");
+                                        process.exit(1);
+                                    }
+                                });
+                            })();
+                        } else {
+                            getPassword();
+                        }
+                    });
+                })();
+            } else {
+                getUsername();
+            }
+        });
+    })();
+}
+if (prgm.hasOwnProperty("delUser")) {
+    (function getUsername () {
+        read({
+            prompt: "username> "
+        }, function (err, result, isDefault) {
+            if (err) {
+                console.err(err);
+                process.exit(1);
+            }
+            if (result.trim().length) {
+                var users = require(__dirname + "/../lib/html/users.json");
+                var username = result.trim().toLowerCase();
+                if (users.hasOwnProperty(username)) {
+                    (function getPassword () {
+                        read({
+                            prompt: "password> ",
+                            silent: true
+                        }, function (err, result, isDefault) {
+                            if (err) {
+                                console.error(err);
+                                process.exit(1);
+                            } else if (users[username] === result) {
+                                delete users[username];
+                                fs.writeFileSync(__dirname + "/../lib/html/users.json", JSON.stringify(users));
+                                console.log("Deleted " + username);
+                                process.exit(0);
+                            } else {
+                                console.error("\x1b[31mFatal:\x1b[0m: Password does not match user");
+                                process.exit(0);
+                            }
+                        });
+                    })();
+                } else {
+                    console.err("User " + username + " does not exist");
+                    process.exit(1);
+                }
+            } else {
+                getUsername();
+            }
+        });
+    })();
+}
+if (prgm.hasOwnProperty("listUsers")) {
+    var users = require(__dirname + "/../lib/html/users.json");
+    var u = [];
+    for (var prop in users) {
+        u.push(prop);
+    }
+    console.log(u.join(", "));
+    process.exit(0);
+}
+if (prgm.start) {
+    var server;
+    if (!prgm.hasOwnProperty("protocol")) {
+        prgm.protocol = "HTTP";
+    }
+    if (!prgm.hasOwnProperty("port")) {
+        prgm.port = 8069;
+    }
+    /**
+     * Handles every request that makes it to the server
+     * @param {RequestObject} request - included in http|https
+     * @param {ResponseObject} response - uncluded in http|https
+     * @returns {undefined} undefined
+     */
+    function handleRequest (request, response) {
+        response.on("close", function () {
+            console.error("The underlying connection was terminated before response.end was able to flush.");
+        });
+        response.on("finish", function () {
+            console.debug("Finished request.");
+        });
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Server", "Node/JRPC 2.0");
+        if (request.method === "OPTIONS") {
+            response.statusCode = 200;
+            response.setHeader("Allow", "POST");
+            response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+            response.end();
+        } else if (request.method !== "POST") {
+            console.debug("Invalid method: " + request.method);
+            response.statusCode = 405;
+            response.setHeader("Status", "405 Method Not Allowed");
+            response.end();
+        } else {
+            var data = "";
+            request.on("data", function (pdata) {
+                data += pdata;
+                if (data.length > 1e6) {
+                    data = "";
+                    response.writeHead(413, {"Content-Type": "text/plain"});
+                    request.connection.destroy();
+                    console.wrn("POST memory overload");
+                }
+            });
+            request.on("end", function () {
+                request.post = data;
+                response.statusCode = 200;
+                response.setHeader("Status", "200 OK");
+                response.setHeader("Content-Type", "application/json");
+                var rep = {
+                    jsonrpc: "2.0",
+                    result: null,
+                    id: null,
+                    error: null
+                };
+                try {
+                    request.post = JSON.parse(request.post);
+                } catch (e) {
+                    rep.error = {code: -32700, message: "Parse error"};
+                    response.end(JSON.stringify(rep));
+                }
+                if (request.post.hasOwnProperty("id")) {
+                    rep.id = request.post.id;
+                }
+                if (!request.post.hasOwnProperty("jsonrpc") || !request.post.hasOwnProperty("method") || request.post.jsonrpc !== "2.0") {
+                    rep.error = {code: -32600, message: "Invalid request"};
+                    response.end(JSON.stringify(rep));
+                } else {
+                    console.debug(JSON.stringify(request.post));
+                    switch (request.post.method) {
+                        case "login":
+                            if (request.post.params && request.post.params.length === 2) {
+                                if (auth[request.post.params[0]] && auth[request.post.params[0]] === request.post.params[1]) {
+                                    var id = "";
+                                    do {
+                                        id = Math.floor((Math.random() * 100000000000000000)).toString(16) + Math.floor((Math.random() * 100000000000000000)).toString(16) + Math.floor((Math.random() * 100000000000000000)).toString(16);
+                                    } while (userCache.hasOwnProperty(id));
+                                    userCache[id] = request.post.params[0];
+                                    rep.result = id;
+                                    console.log("Authenticated " + userCache[id] + " with id " + id);
+                                    response.end(JSON.stringify(rep));
+                                } else {
+                                    rep.error = {code: -32000, message: "Not authorized"};
+                                    response.end(JSON.stringify(rep));
+                                }
+                            } else {
+                                rep.error = {code: -32602, message: "Invalid params"};
+                                response.end(JSON.stringify(rep));
+                            }
+                            break;
+                        case "logout":
+                            if (request.post.params && request.post.params.length === 1) {
+                                console.log("Logged " + userCache[request.post.params[0]] + " out (" + request.post.params[0] + ")");
+                                delete userCache[request.post.params[0]];
+                                rep.result = "Token deleted. Type exit to exit.";
+                                response.end(JSON.stringify(rep));
+                            } else {
+                                rep.error = {code: -32602, message: "Invalid params"};
+                                response.end(JSON.stringify(rep));
+                            }
+                            break;
+                        case "help":
+                            rep.result = "Commands: login, help, zookin, logout, clear, exit";
+                            response.end(JSON.stringify(rep));
+                            break;
+                        case "zookin":
+                            if (request.post.params && request.post.params.length && userCache[request.post.params[0]]) {
+                                if (request.post.params.indexOf("zws") !== -1) {
+                                    console.wrn("Cannot access zws in zws");
+                                    rep.error = {code: -32002, message: "Cannot use Zookin Web Service while in a ZWS Session"};
+                                    response.end(JSON.stringify(rep));
+                                } else {
+                                    console.debug(userCache[request.post.params[0]], "is issuing a zookin command");
+                                    request.post.params.splice(0, 1);
+                                    console.info("zookin " + request.post.params.concat("--table").join(" "));
+                                    var zk = child_process.spawn(__dirname + "/zookin", request.post.params.concat("--table"));
+                                    rep.result = "";
+                                    zk.stdout.on("data", function (d) {
+                                        rep.result += d.toString();
+                                    });
+                                    zk.stderr.on("data", function (d) {
+                                        rep.result += d.toString();
+                                    });
+                                    zk.on("close", function (code) {
+                                        if (code !== 0) {
+                                            // rep.error = {code: -32001, message: "Zookin Error", data: "" + code};
+                                        }
+                                        response.end(JSON.stringify(rep));
+                                    });
+                                }
+                            } else {
+                                rep.error = {code: -32000, message: "Not authorized - Log in with \"login\""};
+                                response.end(JSON.stringify(rep));
+                            }
+                            break;
+                        default:
+                            console.debug("Method not found", request.post);
+                            rep.error = {code: -32601, message: "Method not found", data: "The method [" + request.post.method + "] does not exist"};
+                            response.end(JSON.stringify(rep));
+                            break;
+                    }
+                }
+            });
+        }
+    }
+    switch (prgm.protocol.toUpperCase()) {
+        case "HTTP":
+            http = require("http");
+            server = http.createServer(handleRequest);
+            break;
+        case "HTTPS":
+            https = require("https");
+            if (prgm.key && prgm.cert) {
+                server = https.createServer({key: fs.readFileSync(prgm.key), cert: fs.readFileSync(prgm.cert)}, handleRequest);
+            } else {
+                console.error("\x1b[31mFatal\x1b[0m: Protocol HTTPS requires a key and certificate");
+                process.exit(1);
+            }
+            break;
+        default:
+            console.error("\x1b[31mFatal\x1b[0m: Unknown protocol: " + prgm.protocol);
+            process.exit(1);
+    }
+    var auth = require(__dirname + "/../lib/html/users.json");
+    var i = 0;
+    for (var prop in auth) { // eslint-disable-line no-unused-vars
+        i++;
+    }
+    console.info("Loaded " + i + " users from lib/html/users.json");
+    server.listen(prgm.port, function (err) {
+        if (err) {
+            throw err;
+        } else {
+            console.log("ZWS listening on port " + prgm.port);
+        }
+    });
+}
+
+if (typeof process.argv[2] === "undefined") {
+    prgm.help();
+}

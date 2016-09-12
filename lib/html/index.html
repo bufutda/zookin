@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zookin Web Service</title>
+    <meta name="author" content="Mitchell Sawatzky"/>
+    <meta name="Description" content="Zookin Web Service (ZWS) - https://github.com/bufutda/zookin"/>
+    <script src="resources/lib/jquery-1.7.2.min.js"></script>
+    <script src="resources/lib/jquery.mousewheel-min.js"></script>
+    <script src="resources/lib/jquery.terminal.min.js"></script>
+    <script src="resources/lib/unix_formatting.js"></script>
+    <link href="resources/lib/jquery.terminal.min.css" rel="stylesheet"/>
+    <script>
+    jQuery(document).ready(function($) {
+        $('body').terminal("http://watz.local:8070", {
+            login: true,
+            onInit: function (terminal) {
+                window.terminal = terminal;
+                if (terminal.login_name() === "root") {
+                    terminal.set_prompt("[[;#a00;]" + terminal.login_name() + "&commat;zooengg.ca:~ #] ");
+                } else {
+                    terminal.set_prompt(terminal.login_name() + "&commat;zooengg.ca:~ $ ");
+                }
+            },
+            onBeforeLogout: function (terminal) {
+                var p = [terminal.token()];
+                $.jrpc("http://watz.local:8070", "logout", p, function (rep, suc) {
+                    terminal.clear();
+                });
+                return true;
+            },
+            onBeforeCommand: function (terminal) {
+                if (!terminal.token()) {
+                    terminal.clear();
+                }
+                return true;
+            },
+            onAjaxError: function () {
+                this.clear();
+                this.echo("[[;red;]The server is not running.]");
+                this.echo("[[;red;]Please try again later.]");
+                this.freeze(true);
+            }
+        });
+    });
+    </script>
+  </head>
+    <body>
+    </body>
+</html>
