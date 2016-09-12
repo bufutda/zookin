@@ -15,6 +15,10 @@ prgm.option("-g, --generate-from-file <path>", "Generate a new WordTree from the
     .parse(process.argv);
 
 if (prgm.generateFromFile) {
+    if (prgm.hasOwnProperty("table")) {
+        console.error("\x1b[31mFatal\x1b[0m: Cannot modify wordTree in a ZWS session");
+        process.exit(1);
+    }
     var words = fs.readFileSync(prgm.generateFromFile).toString().split("\n");
 
     var wT = {};
@@ -95,6 +99,10 @@ if (prgm.exists) {
     }
 }
 if (prgm.export) {
+    if (prgm.hasOwnProperty("table")) {
+        console.error("\x1b[31mFatal\x1b[0m: Cannot modify wordTree in a ZWS session");
+        process.exit(1);
+    }
     function overwriteFile (p) { // eslint-disable-line require-jsdoc
         read({
             prompt: "Overwrite \x1b[33m" + path.basename(p) + "\x1b[0m? [y/N] "
@@ -162,6 +170,10 @@ if (prgm.export) {
     });
 }
 if (prgm.import) {
+    if (prgm.hasOwnProperty("table")) {
+        console.error("\x1b[31mFatal\x1b[0m: Cannot modify wordTree in a ZWS session");
+        process.exit(1);
+    }
     var p = path.resolve(prgm.import);
     fs.stat(p, function (err, stat) {
         if (err) {
