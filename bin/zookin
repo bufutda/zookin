@@ -4,7 +4,7 @@ if (process.argv[2].substring(0, 1) === "-" || process.argv[2] === "help") {
     process.argv.splice(process.argv.indexOf("--table"), 1);
 }
 var prgm = require("commander");
-prgm.version("zookin v0.0.4 (sept'16)").usage("[-hV] <command> [-options] [--help]");
+prgm.version("zookin v0.0.5 (jan'17)").usage("[-hV] <command> [-options] [--help]");
 
 prgm.command("vigenere", "\x1b[33mcipher\x1b[0m: vigenere");
 prgm.command("caesar", "\x1b[33mcipher\x1b[0m: Caesarean Shift");
@@ -20,7 +20,7 @@ prgm.command("zws", "Zookin Web Service");
 
 prgm.on("--help", function () {
     for (var i = 0; i < prgm.args.length; i++) {
-        if (!/\-/.test(prgm.args[i])) {
+        if (!(/\-/).test(prgm.args[i])) {
             console.error("  \x1b[31mUnknown command: " + prgm.args[i] + "\x1b[0m");
             break;
         }

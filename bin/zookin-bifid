@@ -48,7 +48,7 @@ if (prgm.bruteforce) {
             renderThrottle: 5000,
             callback: function () {
                 console.log("");
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Letter Substitution", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {
@@ -111,7 +111,7 @@ if (prgm.bruteforce) {
                     go.emit("next");
                 });
             } else if (prgm.hasOwnProperty("table")) {
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Letter Substitution", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {
