@@ -7,7 +7,7 @@ MENU=$(cat $OUTPUT)
 case $CODE in
     0)
         # ciphertext entered
-        zookin-bruteforce --table -c "$MENU" 2>&1 | ansifilter > /tmp/zookinoutp.txt
+        zookin-vigenere --table -bc "$MENU" 2>&1 | ansifilter > /tmp/zookinoutp.txt
         dialog --backtitle "Zookin TUI" --textbox /tmp/zookinoutp.txt $(($(tput lines) - 10)) $(($(tput cols) - 10))
         rm /tmp/zookinoutp.txt
         ;;
