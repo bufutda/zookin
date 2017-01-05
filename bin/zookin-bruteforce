@@ -93,7 +93,7 @@ function closeListener (code, origin) { // eslint-disable-line require-jsdoc
     if (!prgm.hasOwnProperty("table")) {
         multi.destroy();
     }
-    var tbl = new utils.Table({
+    var tbl = utils.getTable({
         head: ["P%", "Key", "Result", "SplitLogic", "Cipher"]
     });
     for (var i = 0; i < superTop.length; i++) {

@@ -47,7 +47,7 @@ if (prgm.bruteforce) {
             renderThrottle: 5000,
             callback: function () {
                 console.log("");
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Shift Amount", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {
@@ -91,7 +91,7 @@ if (prgm.bruteforce) {
                     go.emit("next");
                 });
             } else if (prgm.hasOwnProperty("caesar")) {
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Shift Amount", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {

@@ -36,3 +36,4 @@ if (!prgm.hasOwnProperty("runningCommand")) {
 if (typeof process.argv[2] === "undefined") {
     prgm.help();
 }
+

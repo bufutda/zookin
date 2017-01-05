@@ -44,7 +44,7 @@ if (prgm.bruteforce) {
             incomplete: "\x1b[31m░\x1b[0m",
             renderThrottle: 5000,
             callback: function () {
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Skip Amount", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {
@@ -89,7 +89,7 @@ if (prgm.bruteforce) {
                         go.emit("next");
                     });
                 } else if (prgm.hasOwnProperty("table")) {
-                    var tbl = new utils.Table({
+                    var tbl = utils.getTable({
                         head: ["P%", "Skip Amount", "Result", "SplitLogic"]
                     });
                     for (var i = 0; i < superTop.length; i++) {
@@ -113,7 +113,7 @@ if (prgm.bruteforce) {
                     go.emit("next");
                 });
             } else if (prgm.hasOwnProperty("table")) {
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Skip Amount", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {

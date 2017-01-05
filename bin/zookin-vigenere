@@ -4,6 +4,7 @@ var ProgressBar = require("progress");
 var utils = require(__dirname + "/../lib/utils");
 var fs = require("fs");
 var Event = require("events").EventEmitter;
+var bases = require("bases");
 var vigenere = require(__dirname + "/../lib/cipher/KeyedVigenere");
 
 var prgm = require("commander");
@@ -13,11 +14,15 @@ prgm.option("-p, --password-file <path>", "Specify a password dictionary for bru
     .option("-d, --decrypt", "Set mode to decrypt")
     .option("-k, --key <password>", "Key to use for encryption/decryption")
     .option("-b, --bruteforce", "Attempt to bruteforce the cipher")
+    .option("-f, --force-all <int>", "Ignore the dictionary and run an attack up to entropy level specified", parseInt)
     .option("-t, --scoreboard <int>", "Number of entries to keep in the scoreboard (10)")
-    .option("--simple", "Only log possible matches")
+    .option("--simple", "Only log possible matches and updates")
+    .option("--supersimple", "Only log possible matches")
     .option("--table", "Output in table mode")
     .parse(process.argv);
-
+if (prgm.hasOwnProperty("supersimple")) {
+    prgm.simple = prgm.supersimple;
+}
 if (!prgm.hasOwnProperty("cipherText")) {
     console.error("Error: Required switch: -c");
     prgm.help();
@@ -25,7 +30,7 @@ if (!prgm.hasOwnProperty("cipherText")) {
     prgm.cipherText = prgm.cipherText.replace(/ /gmi, "");
 }
 if (prgm.bruteforce) {
-    if (prgm.key || prgm.decrypt || prgm.encrypt) {
+    if (prgm.key || prgm.decrypt || prgm.encrypt || prgm.forceAll) {
         console.error("Error: Incompatible switches");
         prgm.help();
     }
@@ -51,7 +56,7 @@ if (prgm.bruteforce) {
             renderThrottle: 5000,
             callback: function () {
                 console.log("");
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Key", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {
@@ -92,7 +97,9 @@ if (prgm.bruteforce) {
             }
             counterIndex++;
             if (prgm.hasOwnProperty("simple") && (counterIndex / words.length * 100) >= percent) {
-                console.log("-- " + counterIndex);
+                if (!prgm.hasOwnProperty("supersimple")) {
+                    console.log("-- " + counterIndex);
+                }
                 percent += 1;
             }
             if (counterIndex < words.length) {
@@ -100,7 +107,7 @@ if (prgm.bruteforce) {
                     go.emit("next");
                 });
             } else if (prgm.hasOwnProperty("table")) {
-                var tbl = new utils.Table({
+                var tbl = utils.getTable({
                     head: ["P%", "Key", "Result", "SplitLogic"]
                 });
                 for (var i = 0; i < superTop.length; i++) {
@@ -125,4 +132,41 @@ if (prgm.bruteforce) {
     console.log(vigenere(1, prgm.cipherText, prgm.key ? prgm.key : "", "", ""));
 } else if (prgm.decrypt) {
     console.log(vigenere(-1, prgm.cipherText, prgm.key ? prgm.key : "", "", ""));
+} else if (prgm.forceAll) {
+    var max_str = "";
+    for (var i = 0; i < prgm.forceAll; i++) {
+        max_str += "z";
+    }
+    var max = bases.fromBase26(max_str);
+    console.log("Running a full bruteforce on " + prgm.cipherText);
+    console.log("Estimated Calc Time: " + (0.03 * max) + "ms");
+    var go = new Event();
+    var counter = 0;
+    console.time("operation");
+    go.on("next", function () {
+        var op = process.hrtime();
+        var res = vigenere(-1, prgm.cipherText, bases.toBase26(counter), "", "");
+        utils.validate(res, function (score, split, full) {
+            // if (full) {
+            console.log(process.hrtime(op)[1] + " " + res + " " + bases.toBase26(counter) + " " + split.length + " " + score);
+            // } else if (split.length > top[top.length - 1][3].length) {
+            //     if (score > top[top.length - 1][1]) {
+            //         utils.insert(top, res, score, words[counterIndex], split);
+            //         if (prgm.hasOwnProperty("simple")) {
+            //             console.log(["top", res, score, words[counterIndex], split.join(" ")].join(" "));
+            //         }
+            //     }
+            // }
+            counter++;
+            if (counter < max) {
+                process.nextTick(function () {
+                    go.emit("next");
+                });
+                return;
+            }
+            console.timeEnd("operation");
+            process.exit(0);
+        });
+    });
+    go.emit("next");
 }

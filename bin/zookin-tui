@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# the directory to further dialog scripts
+export DLG="~/dev/git/zookin/lib/dialog/"
+
+while true; do
+    # the temporary dialog output
+    OUTPUT="/tmp/zookindialog.txt"
+
+    # create an empty file
+    >$OUTPUT
+
+    # remove the file on interruptions (cleanup)
+    trap "rm $OUTPUT; exit" SIGHUP SIGINT SIGTERM
+
+    dialog --backtitle "Zookin TUI" --cancel-label "Exit" --menu "$(zookin -V --version)" 11 100 90 \
+        "Ciphers" "Preform various operations on plain and cipher texts with the installed ciphers" \
+        "Utilities" "Toggle dictionaries, view sample scores, etc" \
+        "Bruteforce" "Run every installed cipher against the text" \
+        "ZWS" "Zookin Web Service" 2>$OUTPUT
+
+    # get response code
+    CODE=$?
+    # get menu selection
+    MENU=$(<$OUTPUT)
+
+    # exit code parsing
+    case $CODE in
+        0)
+            # menu item selected
+            case $MENU in
+                "Ciphers")
+                    eval "${DLG}ciphers-menu.sh"
+                    ;;
+                "Utilities")
+                    eval "${DLG}utils-menu.sh"
+                    ;;
+                "Bruteforce")
+                    eval "${DLG}bruteforce.sh"
+                    ;;
+                "ZWS")
+                    eval "${DLG}zws-menu.sh"
+                    ;;
+            esac
+            case $? in
+                0)
+                    # All ok. Restart script
+                    continue
+                    ;;
+                1)
+                    clear
+                    echo "Aborted: CNCL"
+                    ;;
+                255)
+                    clear
+                    echo "Aborted: ESC"
+                    ;;
+            esac
+            rm $OUTPUT
+            exit
+            ;;
+        1)
+            # Cancelled
+            # remove the temp file
+            rm $OUTPUT
+            clear
+            exit
+            ;;
+        255)
+            # ESC pressed
+            # remove the temp file
+            rm $OUTPUT
+            clear
+            echo "Aborted: ESC"
+            exit
+            ;;
+    esac
+done
