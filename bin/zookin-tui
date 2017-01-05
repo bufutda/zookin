@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # the directory to further dialog scripts
-export DLG="~/dev/git/zookin/lib/dialog/"
+export DLG="/Users/Mitchell/dev/git/zookin/lib/dialog/"
 
 while true; do
     # the temporary dialog output
