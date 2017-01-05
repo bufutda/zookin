@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 OUTPUT="/tmp/zookindialog.txt"
 while true; do
-    dialog --backtitle "Zookin TUI" --extra-button --extra-label "Return" --menu "Zookin | Ciphers | Vigenere" 10 100 90 \
+    dialog --backtitle "Zookin TUI" --extra-button --extra-label "Return" --menu "Zookin | Ciphers | Caesarian Shift" 11 100 90 \
         "Bruteforce" "Attempt a bruteforce on some ciphertext" \
         "Encrypt" "Encrypt some ciphertext" \
-        "Decrypt" "Decrypt some ciphertext" 2>$OUTPUT
+        "Decrypt" "Decrypt some ciphertext" \
+        "Look at All" "View all options of decryption" 2>$OUTPUT
     CODE=$?
     MENU=$(<$OUTPUT)
 
@@ -13,13 +14,16 @@ while true; do
             # menu item selected
             case $MENU in
                 "Bruteforce")
-                    eval "${DLG}vigenere/bruteforce.sh"
+                    eval "${DLG}caesar/bruteforce.sh"
                     ;;
                 "Encrypt")
-                    eval "${DLG}vigenere/encrypt.sh"
+                    eval "${DLG}caesar/encrypt.sh"
                     ;;
                 "Decrypt")
-                    eval "${DLG}vigenere/decrypt.sh"
+                    eval "${DLG}caesar/decrypt.sh"
+                    ;;
+                "Look at All")
+                    eval "${DLG}caesar/all.sh"
                     ;;
             esac
             continue

@@ -11,6 +11,7 @@ prgm.option("-c, --cipher-text <text>", "Text to encrypt or decrypt")
     .option("-d, --decrypt", "Decrypt the cipher text with the key")
     .option("-k, --key <width>", "Key to use for encryption/decryption", parseInt)
     .option("-b, --bruteforce", "Attempt to bruteforce the cipher")
+    .option("-f, --full-run", "Print out every option")
     .option("-t, --scoreboard <int>", "Number of entries to keep in the scoreboard (10)")
     .option("--simple", "Only log possible matches")
     .option("--table", "Output in table mode")
@@ -115,5 +116,14 @@ if (prgm.bruteforce) {
 } else if (prgm.encrypt) {
     console.log(caesar(1, prgm.cipherText, prgm.key ? prgm.key : 12));
 } else if (prgm.decrypt) {
-    console.log(caesar(-1, prgm.cipherText, prgm.key ? prgm.key : 4));
+    console.log(caesar(1, prgm.cipherText, prgm.key ? 26 - prgm.key : 4));
+} else if (prgm.fullRun) {
+    for (var i = 0; i < 26; i++) {
+        (function (i) {
+            var str = caesar(-1, prgm.cipherText, i);
+            utils.validate(str, function (sc, split, full) {
+                console.log(i + "\t" + caesar(-1, prgm.cipherText, i) + "\t" + utils.separateString(str, split));
+            });
+        })(i);
+    }
 }

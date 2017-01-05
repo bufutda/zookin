@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 OUTPUT="/tmp/zookindialog.txt"
 while true; do
-    dialog --backtitle "Zookin TUI" --extra-button --extra-label "Return" --menu "Zookin | Wordtree" 12 100 90 \
+    dialog --backtitle "Zookin TUI" --extra-button --extra-label "Return" --menu "Zookin | Utilities | Wordtree" 12 100 90 \
         "Generate" "Create a new wordtree from a file" \
         "Add" "Insert a word into the current tree" \
         "Exists" "Test whether a word is in the current tree" \

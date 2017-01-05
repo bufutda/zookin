@@ -8,7 +8,7 @@ while true; do
         "Rotate" "Write the letters in a rectangular grid and then rotate it" \
         "Skip" "Write down the letter, count forward N characters" \
         "Affine" "Caesarian shift with a multiplier" \
-        "Bifid" "Some crazy shit right here" \
+        "Bifid" "Split text into 2 streams, and then combine them" \
         "Playfair" "Use pairs of letters and a 5x5 grid to encode a message" 2>$OUTPUT
     CODE=$?
     MENU=$(<$OUTPUT)
@@ -21,7 +21,7 @@ while true; do
                     eval "${DLG}vigenere/menu.sh"
                     ;;
                 "Caesarian Shift")
-                    eval "${DLG}casear/menu.sh"
+                    eval "${DLG}caesar/menu.sh"
                     ;;
                 "Rotate")
                     eval "${DLG}rotate/menu.sh"

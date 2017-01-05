@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 OUTPUT="/tmp/zookindialog.txt"
 while true; do
-    dialog --backtitle "Zookin TUI" --extra-button --extra-label "Return" --menu "Zookin | Ciphers | Vigenere" 10 100 90 \
+    dialog --backtitle "Zookin TUI" --extra-button --extra-label "Return" --menu "Zookin | Ciphers | Affine" 10 100 90 \
         "Bruteforce" "Attempt a bruteforce on some ciphertext" \
         "Encrypt" "Encrypt some ciphertext" \
         "Decrypt" "Decrypt some ciphertext" 2>$OUTPUT
@@ -13,13 +13,13 @@ while true; do
             # menu item selected
             case $MENU in
                 "Bruteforce")
-                    eval "${DLG}vigenere/bruteforce.sh"
+                    eval "${DLG}affine/bruteforce.sh"
                     ;;
                 "Encrypt")
-                    eval "${DLG}vigenere/encrypt.sh"
+                    eval "${DLG}affine/encrypt.sh"
                     ;;
                 "Decrypt")
-                    eval "${DLG}vigenere/decrypt.sh"
+                    eval "${DLG}affine/decrypt.sh"
                     ;;
             esac
             continue
