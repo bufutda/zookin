@@ -11,6 +11,7 @@ prgm.option("-g, --generate-from-file <path>", "Generate a new WordTree from the
     .option("-x, --exists <word>", "Check if a word is in the wordtree at lib/dict/wordtree.json")
     .option("--export <path>", "Export the wordtree to the path specified")
     .option("--import <path>", "Import the wordtree at the path specified")
+    .option("--do-not-ask", "Assume the default")
     .option("--table", "DO-NOT-USE")
     .parse(process.argv);
 
@@ -41,6 +42,7 @@ if (prgm.generateFromFile) {
     for (var i = 0; i < words.length; i++) {
         var word = words[i].toUpperCase().split("");
         if (word.length) {
+            console.log("[WordTree] Adding " + words[i]);
             recursiveTreeBuild(0, wT, word);
         }
     }
@@ -134,7 +136,11 @@ if (prgm.export) {
                 console.error("\x1b[31mFatal\x1b[0m: " + path.resolve(p + "/wordTree.gz") + " is a directory");
                 process.exit(1);
             } else if (stat.isFile()) {
-                overwriteFile(path.resolve(p + "/wordTree.gz"));
+                if (!prgm.hasOwnProperty("doNotAsk")) {
+                    overwriteFile(path.resolve(p + "/wordTree.gz"));
+                } else {
+                    console.log("Refusing to overwrite existing file: " + path.resolve(p + "/wordTree.gz"));
+                }
             }
         });
     }
@@ -193,36 +199,40 @@ if (prgm.import) {
                             throw err;
                         } else {
                             console.log("Imported new wordTree.");
-                            (function askDelete () {
-                                read({
-                                    prompt: "Delete \x1b[33m" + path.basename(p) + "\x1b[0m? [y/N] "
-                                }, function (err, response, isDefault) {
-                                    if (err) {
-                                        throw err;
-                                    } else {
-                                        switch (response.toLowerCase()) {
-                                            case "n":
-                                            case "no":
-                                            case "":
-                                                process.exit(0);
-                                                break;
-                                            case "y":
-                                            case "yes":
-                                                fs.unlink(p, function (err) {
-                                                    if (err) {
-                                                        throw err;
-                                                    } else {
-                                                        process.exit(0);
-                                                    }
-                                                });
-                                                break;
-                                            default:
-                                                askDelete();
-                                                break;
+                            if (!prgm.hasOwnProperty("doNotAsk")) {
+                                (function askDelete () {
+                                    read({
+                                        prompt: "Delete \x1b[33m" + path.basename(p) + "\x1b[0m? [y/N] "
+                                    }, function (err, response, isDefault) {
+                                        if (err) {
+                                            throw err;
+                                        } else {
+                                            switch (response.toLowerCase()) {
+                                                case "n":
+                                                case "no":
+                                                case "":
+                                                    process.exit(0);
+                                                    break;
+                                                case "y":
+                                                case "yes":
+                                                    fs.unlink(p, function (err) {
+                                                        if (err) {
+                                                            throw err;
+                                                        } else {
+                                                            process.exit(0);
+                                                        }
+                                                    });
+                                                    break;
+                                                default:
+                                                    askDelete();
+                                                    break;
+                                            }
                                         }
-                                    }
-                                });
-                            })();
+                                    });
+                                })();
+                            } else {
+                                console.log("Assuming not to delete imported file");
+                            }
                         }
                     });
                 }
